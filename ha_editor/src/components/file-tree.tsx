@@ -45,11 +45,13 @@ const actionButton = 'size-8 rounded-full text-icon hover:bg-hover hover:text-ic
 
 type Props = {
   active: string; dirty: boolean; refreshKey: number; onRefresh: () => void;
+  /** Show the configuration folder as the top row (add-on option); null while unknown. */
+  showRoot: boolean | null;
   onOpen: (path: string) => void; onError: (message: string) => void;
   onRenamed: (from: string, to: string) => void; onDeleted: (path: string) => void;
 };
 
-export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError, onRenamed, onDeleted }: Props) {
+export function FileTree({ active, dirty, refreshKey, onRefresh, showRoot, onOpen, onError, onRenamed, onDeleted }: Props) {
   const [entries, setEntries] = useState<Record<string, Entry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['']));
   const expandedRef = useRef(expanded); expandedRef.current = expanded;
@@ -143,7 +145,9 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
   // Right-click opens the menu for the row under the pointer; empty space and open name fields have none.
   function onContextMenu(event: MouseEvent<HTMLElement>) {
     const row = (event.target as HTMLElement).closest<HTMLElement>('[data-tree-row]');
-    if (!row || renaming !== null || creating) { event.preventDefault(); setMenuTarget(null); return; }
+    if (renaming !== null || creating) { event.preventDefault(); setMenuTarget(null); return; }
+    // Without a root row, empty space stands in for the configuration folder.
+    if (!row) { if (showRoot === false) setMenuTarget({ path: '', directory: true }); else { event.preventDefault(); setMenuTarget(null); } return; }
     setMenuTarget({ path: row.dataset.path!, directory: row.hasAttribute('aria-expanded') });
   }
 
@@ -202,7 +206,7 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
     if (!list) return null;
     return (
       <div role="group" className="relative">
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-guide" style={{ left: 12 + (depth - 1) * 16 }} />
+        {depth > 0 && <span aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-guide" style={{ left: 12 + (depth - 1) * 16 }} />}
         {creating?.parent === path && (
           <div className="flex h-8 w-full items-center gap-1.5 pr-1" style={{ paddingLeft: 4 + depth * 16 }}>
             <span className="w-4 shrink-0" />
@@ -227,17 +231,22 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
 
   return (
     <>
-      <div className="absolute top-1 right-2 z-10 flex items-center">
-        <Button variant="ghost" size="icon" className={actionButton} title="New file" aria-label="New file" onClick={() => void startCreate(folderFor(selected.current), false)}><FilePlus2 /></Button>
-        <Button variant="ghost" size="icon" className={actionButton} title="New folder" aria-label="New folder" onClick={() => void startCreate(folderFor(selected.current), true)}><FolderPlus /></Button>
-        <Button variant="ghost" size="icon" className={actionButton} title="Refresh files" aria-label="Refresh files" onClick={onRefresh}><RefreshCw /></Button>
-      </div>
       <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>
           <nav ref={nav} aria-label="Configuration files" onKeyDown={onKeyDown} onContextMenu={onContextMenu} onFocusCapture={remember} onPointerDownCapture={remember}
-            className="min-h-0 flex-1 overflow-auto px-2 pt-2 pb-4">
-            {row('', 'config', true, 0)}
-            {expanded.has('') && children('', 1)}
+            className="min-h-0 flex-1 overflow-auto px-2 pb-4">
+            {/* The root row (or, without it, the actions bar) stays pinned while the tree scrolls. */}
+            {showRoot !== null && (
+              <div className={cn('sticky top-0 z-10 -mx-2 flex items-center gap-1 bg-sidebar px-2 pt-2', !showRoot && 'justify-end pb-1')}>
+                {showRoot && <div className="min-w-0 flex-1">{row('', 'config', true, 0)}</div>}
+                <div className="flex shrink-0 items-center">
+                  <Button variant="ghost" size="icon" className={actionButton} title="New file" aria-label="New file" onClick={() => void startCreate(folderFor(selected.current), false)}><FilePlus2 /></Button>
+                  <Button variant="ghost" size="icon" className={actionButton} title="New folder" aria-label="New folder" onClick={() => void startCreate(folderFor(selected.current), true)}><FolderPlus /></Button>
+                  <Button variant="ghost" size="icon" className={actionButton} title="Refresh files" aria-label="Refresh files" onClick={onRefresh}><RefreshCw /></Button>
+                </div>
+              </div>
+            )}
+            {showRoot !== null && expanded.has('') && children('', showRoot ? 1 : 0)}
           </nav>
         </ContextMenuTrigger>
         <ContextMenuContent onCloseAutoFocus={event => { event.preventDefault(); if (menuTarget && renaming === null && !creating) focusRow(menuTarget.path); }}>

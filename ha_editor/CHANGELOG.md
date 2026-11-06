@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- New options: **Show config folder** turns the top-level configuration folder row on or off, and **Hidden files and folders** hides names such as `.cache` or `.cloud` (wildcards and paths supported) from the tree and search.
+- The tree's New file, New folder and Refresh buttons sit in a pinned row instead of overlapping the files.
+
 ## 0.1.5
 
 - Play audio (MP3, WAV, OGG, Opus, FLAC, M4A, AAC) and video (MP4, MOV, WebM, OGV, MKV) files with the browser's own players, with seeking. The status bar shows duration, size and type, plus dimensions for video. Useful for `tts/` and `media/`.

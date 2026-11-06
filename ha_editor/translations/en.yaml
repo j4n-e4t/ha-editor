@@ -1,0 +1,12 @@
+configuration:
+  show_config_folder:
+    name: Show config folder
+    description: >-
+      Show the configuration folder as the top entry of the file tree.
+      Turn off to list its contents directly.
+  hidden:
+    name: Hidden files and folders
+    description: >-
+      Names to hide from the file tree and search, such as .cache or .cloud.
+      Use * as a wildcard (for example *.db-wal), or a path from the
+      configuration folder such as esphome/.esphome.

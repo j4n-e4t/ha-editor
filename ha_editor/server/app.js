@@ -1,5 +1,6 @@
 import express from 'express';
 import { searchFiles } from './search.js';
+import { hiddenMatcher } from './options.js';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -14,8 +15,9 @@ const MEDIA_TYPES = {
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
-export async function createApp(rootPath, { ingressOnly = false } = {}) {
+export async function createApp(rootPath, { ingressOnly = false, hidden = [], showConfigFolder = true } = {}) {
   const root = await fs.realpath(rootPath);
+  const isHidden = hiddenMatcher(hidden); // Names hidden from the tree and search via the add-on options.
   const app = express();
   app.disable('x-powered-by');
   app.use((req, res, next) => {
@@ -70,7 +72,9 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
   }
   app.get('/api/tree', async (req, res) => {
     const target = await resolve(req.query.path);
-    const entries = (await fs.readdir(target, { withFileTypes: true })).filter(e => !e.isSymbolicLink() && (e.isDirectory() || e.isFile()));
+    const base = path.relative(root, target).split(path.sep).join('/');
+    const entries = (await fs.readdir(target, { withFileTypes: true }))
+      .filter(e => !e.isSymbolicLink() && (e.isDirectory() || e.isFile()) && !isHidden(base ? `${base}/${e.name}` : e.name));
     const listed = await Promise.all(entries.map(async (entry, index) => {
       if (entry.isDirectory()) return { name: entry.name, directory: true };
       const file = path.join(target, entry.name);
@@ -92,7 +96,7 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
       const stat = await fs.stat(target);
       if (stat.isFile() && stat.size < 64) homeAssistantVersion = (await fs.readFile(target, 'utf8')).trim() || null;
     } catch {} // Missing outside Home Assistant (or before its first start).
-    res.json({ homeAssistantVersion });
+    res.json({ homeAssistantVersion, showConfigFolder });
   });
   // Read-only media preview for images, audio and video. Only media types are served, with Range
   // support so players can seek and stream; SVGs run with scripts disabled.
@@ -109,7 +113,7 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
   app.get('/api/search', async (req, res) => {
     const query = req.query.q;
     if (typeof query !== 'string' || !query.trim() || query.length > 256 || /[\r\n\0]/.test(query)) throw fail(400, 'Enter a single-line search of 1–256 characters.');
-    const result = await searchFiles(query, req.query.matchCase === 'true', resolve, () => res.destroyed);
+    const result = await searchFiles(query, req.query.matchCase === 'true', resolve, () => res.destroyed, isHidden);
     if (!res.destroyed) res.json(result);
   });
   // Saves, renames and deletes run one at a time so they cannot interleave.

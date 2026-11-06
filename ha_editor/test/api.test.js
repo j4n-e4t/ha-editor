@@ -134,9 +134,9 @@ test('deletes files and folders inside the configuration directory only', async 
 
 test('reports the Home Assistant version from .HA_VERSION when present', async () => {
   const { root, request } = await fixture();
-  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: null });
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: null, showConfigFolder: true });
   await fs.writeFile(path.join(root, '.HA_VERSION'), '2026.11.0\n');
-  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: '2026.11.0' });
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: '2026.11.0', showConfigFolder: true });
 });
 
 test('creates files and folders without overwriting', async () => {
@@ -200,4 +200,20 @@ test('flags files that cannot be opened so the tree can dim them', async () => {
   await fs.mkdir(path.join(root, 'packages'));
   const tree = Object.fromEntries((await (await request('tree')).json()).map(e => [e.name, !!e.binary]));
   assert.deepEqual(tree, { packages: false, 'configuration.yaml': false, 'cut.yaml': false, 'home-assistant.log': false, 'huge.yaml': true, 'latin1.txt': true, 'photo.png': false, 'zigbee.db': true });
+});
+
+test('hides configured names from the tree and search, and reports the folder option', async () => {
+  const { root, request } = await fixture({ hidden: ['.cache', '*.db-wal', 'esphome/.esphome'], showConfigFolder: false });
+  for (const dir of ['.cache', '.cloud', 'esphome/.esphome', 'packages/.esphome']) await fs.mkdir(path.join(root, dir), { recursive: true });
+  await fs.writeFile(path.join(root, '.cache', 'note.yaml'), 'Home');
+  await fs.writeFile(path.join(root, 'home-assistant_v2.db-wal'), 'Home');
+  await fs.writeFile(path.join(root, 'esphome', 'node.yaml'), 'Home');
+  await fs.writeFile(path.join(root, 'esphome', '.esphome', 'build.yaml'), 'Home');
+  const names = async dir => (await (await request(`tree?path=${encodeURIComponent(dir)}`)).json()).map(e => e.name);
+  assert.deepEqual(await names(''), ['.cloud', 'esphome', 'packages', 'configuration.yaml']);
+  assert.deepEqual(await names('esphome'), ['node.yaml']);
+  assert.deepEqual(await names('packages'), ['.esphome']); // Path patterns only match that path.
+  const result = await (await request('search?q=Home')).json();
+  assert.deepEqual(result.matches.map(m => m.path), ['esphome/node.yaml']);
+  assert.equal((await (await request('info')).json()).showConfigFolder, false);
 });

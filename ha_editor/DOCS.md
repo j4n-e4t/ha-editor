@@ -25,6 +25,23 @@ Saves preserve file permissions and use a temporary file in the same directory f
 
 This does not validate the full Home Assistant configuration or reload Home Assistant. Use Home Assistant's configuration check before applying changes.
 
+## Configuration
+
+Set these on the add-on's **Configuration** tab, then restart the add-on.
+
+- **Show config folder** (`show_config_folder`, default on): show the configuration folder as the top entry of the file tree. Turn it off to list its contents directly; right-click empty space in the tree to create files at the top level.
+- **Hidden files and folders** (`hidden`): names to hide from the file tree and search, for example:
+
+  ```yaml
+  hidden:
+    - .cache
+    - .cloud
+    - "*.db-wal"
+    - esphome/.esphome
+  ```
+
+  A name matches files and folders with that name at any depth, `*` and `?` are wildcards, and an entry containing `/` matches that path from the configuration folder. Hiding a folder hides everything in it. Hidden files are only left out of the UI; they are not protected.
+
 ## Security
 
 The add-on mounts the Home Assistant configuration at `/config` with write access. It exposes no host port and accepts connections only from the Supervisor ingress proxy, so access always goes through Home Assistant authentication. No Supervisor API token or host privileges are requested.

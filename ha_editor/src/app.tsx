@@ -31,8 +31,12 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const searchInput = useRef<HTMLInputElement>(null);
   const [haVersion, setHaVersion] = useState<string | null>(null);
+  const [showConfigFolder, setShowConfigFolder] = useState<boolean | null>(null);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
-  useEffect(() => { api<{ homeAssistantVersion: string | null }>('info').then(info => setHaVersion(info.homeAssistantVersion), () => {}); }, []);
+  useEffect(() => {
+    api<{ homeAssistantVersion: string | null; showConfigFolder: boolean }>('info')
+      .then(info => { setHaVersion(info.homeAssistantVersion); setShowConfigFolder(info.showConfigFolder); }, () => setShowConfigFolder(true));
+  }, []);
   useEffect(() => setSidebar(!narrow), [narrow]);
   const showSearch = useCallback(() => { setSidebar(true); setTab('search'); requestAnimationFrame(() => searchInput.current?.select()); }, []);
 
@@ -88,7 +92,7 @@ export function App() {
               </TabsList>
             </div>
             <TabsContent value="files" forceMount className="relative mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-              <FileTree active={state.path} dirty={state.dirty} refreshKey={refreshKey} onRefresh={() => { setError(''); setRefreshKey(k => k + 1); }} onOpen={openFile} onError={setError} onRenamed={moved} onDeleted={removed} />
+              <FileTree active={state.path} dirty={state.dirty} refreshKey={refreshKey} showRoot={showConfigFolder} onRefresh={() => { setError(''); setRefreshKey(k => k + 1); }} onOpen={openFile} onError={setError} onRenamed={moved} onDeleted={removed} />
             </TabsContent>
             <TabsContent value="search" forceMount className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
               <SearchPanel inputRef={searchInput} onOpen={match => { void open(match.path, match); if (narrow) setSidebar(false); }} />

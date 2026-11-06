@@ -1,5 +1,5 @@
 name: HA Editor
-version: "0.1.5"
+version: "0.1.6"
 slug: ha_editor
 description: A minimal file tree and Monaco editor for your Home Assistant configuration
 url: https://github.com/j4n-e4t/ha-editor
@@ -19,5 +19,10 @@ map:
   - type: homeassistant_config
     path: /config
     read_only: false
-options: {}
-schema: {}
+options:
+  show_config_folder: true
+  hidden: []
+schema:
+  show_config_folder: bool
+  hidden:
+    - str

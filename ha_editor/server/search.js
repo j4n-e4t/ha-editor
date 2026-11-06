@@ -6,7 +6,7 @@ const MAX_FILES = 2000;
 const MAX_BYTES = 32 * 1024 * 1024;
 
 // Literal search only: no user-controlled regex execution or external index process.
-export async function searchFiles(query, matchCase, resolve, cancelled = () => false) {
+export async function searchFiles(query, matchCase, resolve, cancelled = () => false, isHidden = () => false) {
   const matches = [];
   let files = 0, bytesRead = 0, skipped = 0, limited = false;
   const deadline = Date.now() + 5000;
@@ -19,8 +19,8 @@ export async function searchFiles(query, matchCase, resolve, cancelled = () => f
     for (const entry of entries) {
       if (cancelled() || limited) return;
       if (Date.now() > deadline || files >= MAX_FILES || bytesRead >= MAX_BYTES) { limited = true; return; }
-      if (entry.isSymbolicLink() || excluded.has(entry.name) || entry.name.startsWith('.ha-editor-')) continue;
       const filePath = relative ? `${relative}/${entry.name}` : entry.name;
+      if (entry.isSymbolicLink() || excluded.has(entry.name) || entry.name.startsWith('.ha-editor-') || isHidden(filePath)) continue;
       try {
         if (entry.isDirectory()) { await walk(filePath); continue; }
         if (!entry.isFile()) continue;
