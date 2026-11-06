@@ -1,4 +1,4 @@
-FROM oven/bun:1.3-alpine AS build
+FROM oven/bun:1.3.14-alpine AS build
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -8,7 +8,7 @@ COPY public ./public
 COPY scripts ./scripts
 RUN bun run build
 
-FROM oven/bun:1.3-alpine
+FROM oven/bun:1.3.14-alpine
 LABEL io.hass.type="addon" io.hass.name="HA Editor" org.opencontainers.image.source="https://github.com/j4n-e4t/ha-editor"
 WORKDIR /app
 ENV NODE_ENV=production CONFIG_ROOT=/config PORT=8099 INGRESS_ONLY=true

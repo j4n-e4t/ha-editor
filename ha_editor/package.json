@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun scripts/dev.ts",
-    "build": "bun --bun tsc --noEmit && bun --bun vite build",
+    "check": "bun --bun tsc --noEmit",
+    "build": "bun --bun vite build",
     "start": "bun server/index.js",
     "test": "bun test"
   },

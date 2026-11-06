@@ -32,6 +32,7 @@ bun run dev
 Open the Vite URL printed in the terminal. Development edits the bundled `ha_editor/.example/` files, never your actual Home Assistant configuration. The API listens on localhost:8099.
 
 ```sh
+bun run check
 bun test
 bun run build
 CONFIG_ROOT=/absolute/path/to/config HOST=127.0.0.1 bun start
@@ -52,4 +53,4 @@ Bump `version` in `ha_editor/config.yaml` and add an entry to `ha_editor/CHANGEL
 
 ## Verification
 
-`bun run build` checks TypeScript and bundles the editor and workers. `bun test` exercises the real HTTP API against temporary directories, including conflicts and access restrictions, plus the file-icon classification. The add-on image builds locally with Docker. The React UI and installation on Home Assistant OS still need manual testing on a running instance.
+`bun run check` type-checks the project and `bun run build` bundles the editor and workers; the add-on image runs only the build, so installation stays light on low-memory devices. `bun test` exercises the real HTTP API against temporary directories, including conflicts and access restrictions, plus the file-icon classification. CI runs the type check, tests, and image builds for amd64 and aarch64 on every push. The React UI and installation on Home Assistant OS still need manual testing on a running instance.
