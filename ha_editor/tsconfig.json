@@ -20,12 +20,11 @@
     },
     "types": [
       "vite/client",
-      "bun"
+      "node"
     ]
   },
   "include": [
     "src",
-    "vite.config.ts",
-    "scripts"
+    "vite.config.ts"
   ]
 }

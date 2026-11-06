@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Run on Node.js 24 instead of Bun, which crashed on x86 CPUs without AVX.
+
 ## 0.1.2
 
 - Install prebuilt images from GitHub Container Registry instead of building on the device. Installing or updating is now a single image download.

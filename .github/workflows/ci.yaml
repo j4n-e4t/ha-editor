@@ -13,14 +13,16 @@ jobs:
       run:
         working-directory: ha_editor
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          bun-version: 1.3.14
-      - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun test
-      - run: bun run build
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ha_editor/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
 
   # Builds one image per Home Assistant architecture on a native runner and
   # pushes it to ghcr.io/<owner>/<arch>-addon-ha_editor:<version>, the image
@@ -41,7 +43,7 @@ jobs:
             platform: linux/arm64
             runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Read add-on version
         id: meta
         run: |

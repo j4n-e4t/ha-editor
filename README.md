@@ -21,21 +21,21 @@ See [the add-on documentation](ha_editor/DOCS.md) for usage details.
 
 ## Development
 
-The add-on lives in [`ha_editor/`](ha_editor). It requires [Bun](https://bun.sh) 1.3+. The UI is React + Tailwind CSS with shadcn/ui components and Lucide icons; the server is Express running on Bun.
+The add-on lives in [`ha_editor/`](ha_editor). It requires Node.js 24+. The UI is React + Tailwind CSS with shadcn/ui components and Lucide icons; the server is Express on Node.js.
 
 ```sh
 cd ha_editor
-bun install
-bun run dev
+npm ci
+npm run dev
 ```
 
 Open the Vite URL printed in the terminal. Development edits the bundled `ha_editor/.example/` files, never your actual Home Assistant configuration. The API listens on localhost:8099.
 
 ```sh
-bun run check
-bun test
-bun run build
-CONFIG_ROOT=/absolute/path/to/config HOST=127.0.0.1 bun start
+npm run check
+npm test
+npm run build
+CONFIG_ROOT=/absolute/path/to/config HOST=127.0.0.1 npm start
 ```
 
 The standalone server has no login. Keep it on localhost; the add-on uses Home Assistant authentication through ingress.
@@ -55,4 +55,4 @@ To test the image without publishing, remove the `image:` line from `config.yaml
 
 ## Verification
 
-`bun run check` type-checks the project and `bun run build` bundles the editor and workers; the add-on image runs only the build, so installation stays light on low-memory devices. `bun test` exercises the real HTTP API against temporary directories, including conflicts and access restrictions, plus the file-icon classification. CI runs the type check, tests, and image builds for amd64 and aarch64 on every push. The React UI and installation on Home Assistant OS still need manual testing on a running instance.
+`npm run check` type-checks the project and `npm run build` bundles the editor and workers; the add-on image runs only the build, so installation stays light on low-memory devices. `npm test` exercises the real HTTP API against temporary directories, including conflicts and access restrictions, plus the file-icon classification. CI runs the type check, tests, and image builds for amd64 and aarch64 on every push. The React UI and installation on Home Assistant OS still need manual testing on a running instance.
