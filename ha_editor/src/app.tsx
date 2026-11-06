@@ -1,21 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanelLeft, RefreshCw, Replace, Save, Search, X } from 'lucide-react';
+import { forwardRef, Fragment, useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
+import { ChevronRight, CircleAlert, FileCode2, PanelLeftClose, PanelLeftOpen, Replace, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileTree } from '@/components/file-tree';
 import { SearchPanel } from '@/components/search-panel';
 import { FileIcon } from '@/components/file-icon';
+import { ImageViewer, formatBytes, type ImageInfo } from '@/components/image-viewer';
 import { useEditor } from '@/use-editor';
+import { useHomeAssistant } from '@/lib/home-assistant';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
-const tabTrigger = 'h-full rounded-none border-b-2 border-transparent px-0 font-normal text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none focus-visible:ring-offset-0';
+/** Home Assistant's ha-icon-button: a 48px round target with a 24px icon. */
+const IconButton = forwardRef<HTMLButtonElement, ComponentProps<'button'> & { label: string }>(({ label, className, ...props }, ref) => (
+  <Button ref={ref} variant="ghost" size="icon" title={label} aria-label={label}
+    className={cn('size-12 shrink-0 rounded-full text-icon hover:bg-hover hover:text-icon disabled:opacity-40 [&_svg]:size-6', className)} {...props} />
+));
+
+const tabTrigger = 'h-full flex-1 rounded-none border-b-2 border-transparent px-4 text-sm font-medium text-sidebar-foreground opacity-80 shadow-none hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:opacity-100 data-[state=active]:shadow-none focus-visible:ring-inset focus-visible:ring-offset-0';
+const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 export function App() {
-  const { container, state, error, setError, open, save, find } = useEditor();
-  const [sidebar, setSidebar] = useState(true);
+  const { container, state, crumbs, error, setError, open, save, find, moved, removed, goTo } = useEditor();
+  const breadcrumbs = useRef<HTMLElement>(null);
+  // Keep the innermost crumb visible when the path is wider than the bar.
+  useEffect(() => { const bar = breadcrumbs.current; if (bar) bar.scrollLeft = bar.scrollWidth; }, [crumbs]);
+  const { narrow } = useHomeAssistant();
+  const [sidebar, setSidebar] = useState(!narrow);
   const [tab, setTab] = useState('files');
   const [refreshKey, setRefreshKey] = useState(0);
   const searchInput = useRef<HTMLInputElement>(null);
+  const [haVersion, setHaVersion] = useState<string | null>(null);
+  const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
+  useEffect(() => { api<{ homeAssistantVersion: string | null }>('info').then(info => setHaVersion(info.homeAssistantVersion), () => {}); }, []);
+  useEffect(() => setSidebar(!narrow), [narrow]);
   const showSearch = useCallback(() => { setSidebar(true); setTab('search'); requestAnimationFrame(() => searchInput.current?.select()); }, []);
 
   useEffect(() => {
@@ -31,59 +49,116 @@ export function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [save, find, showSearch]);
 
-  const openFile = useCallback((path: string) => void open(path), [open]);
-  const status = state.saving ? 'Saving…' : state.loading ? 'Loading…' : state.dirty ? 'Unsaved changes' : state.path ? 'Saved' : 'Ready';
-  const name = state.path.split('/').pop();
+  // On phones the file tree is a drawer over the editor that closes once a file is chosen.
+  const openFile = useCallback((path: string) => { void open(path); if (narrow) setSidebar(false); }, [open, narrow]);
+  const slash = state.path.lastIndexOf('/');
+  const SidebarIcon = sidebar ? PanelLeftClose : PanelLeftOpen;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1">
-          <aside aria-label="File explorer" hidden={!sidebar} className="flex w-64 min-w-0 shrink-0 flex-col border-r bg-background max-sm:w-52">
-            <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex h-11 shrink-0 items-center justify-between pr-2 pl-4">
-                <TabsList aria-label="Sidebar" className="h-full gap-4 rounded-none bg-transparent p-0">
-                  <TabsTrigger value="files" className={tabTrigger}>Files</TabsTrigger>
-                  <TabsTrigger value="search" className={tabTrigger}>Search</TabsTrigger>
-                </TabsList>
-                {tab === 'files' && <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" title="Refresh files" aria-label="Refresh files" onClick={() => { setError(''); setRefreshKey(k => k + 1); }}><RefreshCw /></Button>}
-              </div>
-              <TabsContent value="files" forceMount className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                <FileTree active={state.path} refreshKey={refreshKey} onOpen={openFile} onError={setError} />
-              </TabsContent>
-              <TabsContent value="search" forceMount className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                <SearchPanel inputRef={searchInput} onOpen={match => void open(match.path, match)} />
-              </TabsContent>
-            </Tabs>
-          </aside>
-        <main className="relative flex min-w-0 flex-1 flex-col bg-card">
-          <div className="flex h-11 shrink-0 items-center gap-2 border-b pr-3 pl-2 max-sm:gap-1 max-sm:pr-2">
-            <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" title="Toggle file tree" aria-label="Toggle file tree" aria-expanded={sidebar} onClick={() => setSidebar(v => !v)}><PanelLeft /></Button>
-            <div className="flex min-w-0 items-center gap-2" title={state.path}>
-              {state.path && <FileIcon path={state.path} />}
-              <span className="truncate">{name || 'Editor'}{state.dirty && <span className="text-muted-foreground"> •</span>}</span>
+    <div className="flex h-full flex-col bg-background">
+      {/* Mirrors Home Assistant's panel toolbar (hass-subpage): 56px, 8px 12px padding, 20px title. */}
+      <header className="flex h-[var(--header-height)] shrink-0 items-center gap-1 bg-header px-3 py-2 text-header-foreground [border-bottom:var(--app-header-border-bottom)] max-sm:px-1">
+        <IconButton label={sidebar ? 'Hide files' : 'Show files'} aria-expanded={sidebar} onClick={() => setSidebar(v => !v)}><SidebarIcon /></IconButton>
+        <h1 className={cn('m-0 min-w-0 flex-1 truncate text-xl leading-normal font-normal', narrow ? 'ml-2' : 'ml-6')}>Editor</h1>
+        <IconButton label={`Find (${mod}+F)`} disabled={!state.path || state.image} onClick={() => find()}><Search /></IconButton>
+        <IconButton label="Replace" disabled={!state.path || state.image} onClick={() => find(true)} className="max-sm:hidden"><Replace /></IconButton>
+        <Button title={`Save (${mod}+S)`} disabled={!state.dirty || state.saving || state.loading} onClick={() => void save()}
+          className="mr-1 ml-2 h-10 rounded-full px-5 text-sm font-medium shadow-none disabled:bg-hover disabled:text-muted-foreground disabled:opacity-100 max-sm:ml-1 max-sm:px-4">
+          {state.saving ? 'Saving…' : 'Save'}
+        </Button>
+      </header>
+
+      <div className="relative flex min-h-0 flex-1">
+        {/* Home Assistant's drawer timing (Material): 250ms to open, 200ms to close, standard easing. */}
+        {narrow && <div aria-hidden onClick={() => setSidebar(false)}
+          className={cn('absolute inset-0 z-20 bg-black/40 transition-opacity ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+            sidebar ? 'opacity-100 duration-250' : 'pointer-events-none opacity-0 duration-200')} />}
+        {/* Desktop: the column narrows while the panel slides left, so the editor widens with it. */}
+        <div className={cn('flex shrink-0 justify-end overflow-hidden transition-[width] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+          narrow ? cn('absolute inset-y-0 left-0 z-30 w-[min(85vw,320px)] overflow-visible', !sidebar && 'pointer-events-none') : sidebar ? 'w-72 duration-250' : 'w-0 duration-200')}>
+        <aside aria-label="File explorer" inert={!sidebar}
+          className={cn('flex w-72 min-w-72 shrink-0 flex-col border-r bg-sidebar',
+            narrow && cn('w-full min-w-0 shadow-2xl transition-transform ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+              sidebar ? 'translate-x-0 duration-250' : '-translate-x-full shadow-none duration-200'))}>
+          <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex h-12 shrink-0 items-stretch border-b">
+              <TabsList aria-label="Sidebar" className="h-full flex-1 gap-0 rounded-none bg-transparent p-0">
+                <TabsTrigger value="files" className={tabTrigger}>Files</TabsTrigger>
+                <TabsTrigger value="search" className={tabTrigger}>Search</TabsTrigger>
+              </TabsList>
             </div>
-            <div className="ml-auto flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" title="Find (Ctrl/Cmd+F)" aria-label="Find in current file" disabled={!state.path} onClick={() => find()}><Search /></Button>
-              <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" title="Replace (Ctrl+H / Cmd+Option+F)" aria-label="Replace in current file" disabled={!state.path} onClick={() => find(true)}><Replace /></Button>
-              <Button variant="ghost" size="sm" className="ml-1 rounded-full text-primary hover:bg-accent hover:text-primary max-sm:px-2" title="Save (Ctrl/Cmd+S)" disabled={!state.dirty || state.saving || state.loading} onClick={() => void save()}>
-                <Save /><span className="max-sm:hidden">Save</span>
-              </Button>
-            </div>
-          </div>
+            <TabsContent value="files" forceMount className="relative mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+              <FileTree active={state.path} dirty={state.dirty} refreshKey={refreshKey} onRefresh={() => { setError(''); setRefreshKey(k => k + 1); }} onOpen={openFile} onError={setError} onRenamed={moved} onDeleted={removed} />
+            </TabsContent>
+            <TabsContent value="search" forceMount className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+              <SearchPanel inputRef={searchInput} onOpen={match => { void open(match.path, match); if (narrow) setSidebar(false); }} />
+            </TabsContent>
+          </Tabs>
+        </aside>
+        </div>
+
+        <main className="relative flex min-w-0 flex-1 flex-col bg-background">
+          {state.path && (
+            <nav ref={breadcrumbs} aria-label="Breadcrumbs" className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto border-b px-2 text-[13px] whitespace-nowrap text-muted-foreground [scrollbar-width:none]">
+              {/* The file's folders, then the file itself (click to go to the top), then the YAML key path. */}
+              {state.path.split('/').slice(0, -1).map((folder, index) => (
+                <Fragment key={`folder:${index}`}>
+                  <span className="shrink-0 px-1.5">{folder}</span>
+                  <ChevronRight aria-hidden className="size-3.5 shrink-0 opacity-60" />
+                </Fragment>
+              ))}
+              <button type="button" title={`${state.path} · go to top`} onClick={() => goTo(1, 1)}
+                className={cn('flex shrink-0 items-center gap-1.5 rounded-sm px-1.5 py-0.5 hover:bg-hover hover:text-foreground', !crumbs.length && 'text-foreground')}>
+                <FileIcon path={state.path} />{state.path.slice(slash + 1)}
+                {state.dirty && <span aria-label="Unsaved changes" title="Unsaved changes" className="size-2 shrink-0 rounded-full bg-primary" />}
+              </button>
+              {crumbs.map((crumb, index) => (
+                <Fragment key={`${index}:${crumb.line}`}>
+                  <ChevronRight aria-hidden className="size-3.5 shrink-0 opacity-60" />
+                  <button type="button" title={`${crumb.label} · line ${crumb.line}`} onClick={() => goTo(crumb.line, crumb.column)}
+                    aria-current={index === crumbs.length - 1 ? 'location' : undefined}
+                    className={cn('max-w-56 shrink-0 truncate rounded-sm px-1.5 py-0.5 hover:bg-hover hover:text-foreground', index === crumbs.length - 1 && 'text-foreground')}>
+                    {crumb.label}
+                  </button>
+                </Fragment>
+              ))}
+            </nav>
+          )}
           {error && (
-            <div role="alert" className="z-10 flex items-start gap-2 bg-[light-dark(#fff0e4,#3b0f00)] px-4 py-3 leading-normal text-[light-dark(#7e2900,#ffbb89)]">
-              <span className="flex-1">{error}</span>
-              <button type="button" aria-label="Dismiss" className="rounded-sm opacity-70 hover:opacity-100" onClick={() => setError('')}><X className="size-4" /></button>
+            // Home Assistant's ha-alert (error): tinted background, icon in the error color.
+            <div role="alert" className="relative m-3 mb-0 flex items-start gap-3 overflow-hidden rounded-sm bg-[color-mix(in_srgb,var(--error-color)_12%,transparent)] py-2 pr-2 pl-3 leading-normal">
+              <CircleAlert aria-hidden className="mt-0.5 size-6 shrink-0 text-error" />
+              <span className="flex-1 self-center">{error}</span>
+              <IconButton label="Dismiss" className="-my-1 size-9 [&_svg]:size-5" onClick={() => setError('')}><X /></IconButton>
             </div>
           )}
-          <div ref={container} className="min-h-0 flex-1" />
-          {!state.path && <div className="pointer-events-none absolute inset-x-0 top-11 bottom-0 grid place-items-center bg-card text-muted-foreground">Select a file to start editing</div>}
+          <div className="relative min-h-0 flex-1">
+            <div ref={container} className="absolute inset-0" />
+            {state.image && <ImageViewer path={state.path} version={state.version} onInfo={setImageInfo} />}
+          </div>
+          {!state.path && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+              <FileCode2 aria-hidden strokeWidth={1.5} className="size-14 text-icon opacity-60" />
+              <p className="m-0 text-base">Select a file to start editing</p>
+              <p className="m-0 text-xs text-muted-foreground">{mod}+S to save · {mod}+F to find · {mod}+Shift+F to search all files</p>
+            </div>
+          )}
         </main>
       </div>
-      <footer className="flex h-[27px] shrink-0 items-center justify-between gap-3 border-t bg-background px-4 text-xs text-muted-foreground max-sm:justify-end max-sm:px-2 max-sm:text-[10px]">
-        <span role="status" className="max-sm:hidden">{status}</span>
-        {state.path && (
-          <div className={cn('flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5')}>
+
+      <footer className="flex h-6 shrink-0 items-center justify-between gap-3 border-t bg-sidebar px-4 text-xs text-muted-foreground max-sm:justify-end max-sm:px-2 max-sm:text-[10px]">
+        <span className="flex items-center gap-1.5 max-sm:hidden" title="Home Assistant version">
+          {haVersion && <><FileIcon path="configuration.yaml" />Home Assistant {haVersion}</>}
+        </span>
+        {state.image && imageInfo && (
+          <div className="flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5">
+            <span title="Dimensions">{imageInfo.width} × {imageInfo.height}</span>
+            <span title="File size">{formatBytes(imageInfo.bytes)}</span>
+            <span title="Type">{imageInfo.type.replace('image/', '').replace('svg+xml', 'svg').toUpperCase()}</span>
+          </div>
+        )}
+        {state.path && !state.image && (
+          <div className="flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5">
             <span>Ln {state.line}, Col {state.column}{state.selected ? ` (${state.selected} selected)` : ''}</span>
             <span>{state.spaces ? 'Spaces' : 'Tab Size'}: {state.tabSize}</span>
             <span title="File encoding">UTF-8</span>

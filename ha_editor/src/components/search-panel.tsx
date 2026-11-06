@@ -41,13 +41,13 @@ export function SearchPanel({ inputRef, onOpen }: { inputRef: Ref<HTMLInputEleme
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <form role="search" className="px-3 pt-2.5" onSubmit={event => { event.preventDefault(); setNonce(n => n + 1); }}>
+      <form role="search" className="px-3 pt-3" onSubmit={event => { event.preventDefault(); setNonce(n => n + 1); }}>
         <div className="relative flex items-center">
-          <Search aria-hidden className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground" />
+          <Search aria-hidden className="pointer-events-none absolute left-3 size-[18px] text-icon" />
           <Input ref={inputRef} type="search" value={query} onChange={event => { setNonce(0); setQuery(event.target.value); }} placeholder="Search files" aria-label="Search across files"
-            maxLength={256} autoComplete="off" spellCheck={false} className="bg-card pl-8 pr-9" />
+            maxLength={256} autoComplete="off" spellCheck={false} className="h-10 rounded-md bg-card pl-9 pr-10 text-sm shadow-none focus-visible:border-primary focus-visible:ring-primary" />
           <Button type="button" variant="ghost" size="icon" aria-label="Match case" title="Match case" aria-pressed={matchCase} onClick={() => setMatchCase(v => !v)}
-            className={cn('absolute right-1 size-7 text-muted-foreground', matchCase && 'bg-accent text-primary hover:bg-accent hover:text-primary')}>
+            className={cn('absolute right-1.5 size-8 rounded-full text-icon hover:bg-hover', matchCase && 'bg-selected text-primary hover:bg-selected hover:text-primary')}>
             <CaseSensitive className="size-5!" />
           </Button>
         </div>
@@ -63,7 +63,7 @@ export function SearchPanel({ inputRef, onOpen }: { inputRef: Ref<HTMLInputEleme
               const offset = match.column - 1 - match.previewOffset;
               return (
                 <button key={`${match.line}:${match.column}`} type="button" title={`${match.path}:${match.line}:${match.column}`} onClick={() => onOpen(match)}
-                  className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs outline-none hover:bg-accent focus-visible:bg-accent">
+                  className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs outline-none hover:bg-hover focus-visible:bg-hover">
                   <span className="min-w-5 text-right text-muted-foreground">{match.line}</span>
                   <span className="truncate whitespace-pre">
                     {match.previewOffset ? '…' : ''}{match.preview.slice(0, offset)}<mark>{match.preview.slice(offset, offset + match.length)}</mark>{match.preview.slice(offset + match.length)}

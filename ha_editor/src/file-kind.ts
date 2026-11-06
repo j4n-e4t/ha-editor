@@ -1,11 +1,35 @@
-export function fileKind(path: string, directory = false) {
+export type FolderKind = 'folder' | 'esphome' | 'blueprints' | 'image' | 'media' | 'themes' | 'tts' | 'www' | 'zigbee2mqtt' | 'homematicip';
+export type FileKind = FolderKind | 'homeassistant' | 'yaml' | 'json' | 'python' | 'shell' | 'code' | 'database' | 'log' | 'picture' | 'text';
+
+// Top-level folders whose YAML belongs to Home Assistant (includes, packages, blueprints, dashboards…).
+// YAML elsewhere, such as zigbee2mqtt/configuration.yaml, belongs to other tools and stays generic.
+const HOME_ASSISTANT_FOLDERS = new Set([
+  'packages', 'blueprints', 'automations', 'scripts', 'scenes', 'templates', 'sensors', 'binary_sensors',
+  'includes', 'integrations', 'entities', 'themes', 'lovelace', 'dashboards', 'custom_components',
+]);
+// Icons for well-known top-level folders of a Home Assistant configuration directory.
+const FOLDERS: Record<string, FolderKind> = {
+  esphome: 'esphome', blueprints: 'blueprints', image: 'image', media: 'media', themes: 'themes', tts: 'tts', www: 'www',
+  zigbee2mqtt: 'zigbee2mqtt', homematicip_local: 'homematicip',
+};
+const IMAGE = /\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/i;
+/** Images open in the preview instead of the text editor. */
+export const isImage = (path: string) => IMAGE.test(path);
+const EXTENSIONS: Record<string, FileKind> = { json: 'json', py: 'python', sh: 'shell', js: 'code', ts: 'code', html: 'code', css: 'code', xml: 'code' };
+
+export function fileKind(path: string, directory = false): FileKind {
   const parts = path.toLowerCase().split('/');
   const name = parts.at(-1) || '';
+  // Only the top-level folders themselves get special icons, not their subfolders.
+  if (directory) return (parts.length === 1 && FOLDERS[name]) || 'folder';
   const yaml = /\.ya?ml$/.test(name);
-  if (parts.includes('esphome') && (yaml || directory)) return 'esphome';
-  if (directory) return 'folder';
-  if (yaml && (/^(configuration|automations?|scripts?|scenes?|secrets|customize(?:_glob|_domain)?|groups?|sensors?|binary_sensors?|switches?|lights?|templates?|helpers?)\.ya?ml$/.test(name)
-    || parts.some(part => ['packages', 'blueprints', 'automations', 'scripts', 'scenes'].includes(part)))) return 'homeassistant';
-  if (yaml) return 'yaml';
-  return ({ json: 'json', py: 'python', sh: 'shell', js: 'code', ts: 'code', html: 'code', css: 'code', xml: 'code' } as Record<string, string>)[name.split('.').pop() || ''] || 'text';
+  if (yaml && parts[0] === 'esphome') return 'esphome';
+  if (isImage(name)) return 'picture';
+  if (/\.(db|sqlite3?)(-[a-z]+)?$/.test(name)) return 'database'; // Includes SQLite -shm/-wal/-journal companions.
+  if (/\.log(\.[\w-]+)?$/.test(name)) return 'log'; // home-assistant.log, .log.1, .log.old, .log.fault
+  if (yaml) return parts.length === 1 || HOME_ASSISTANT_FOLDERS.has(parts[0]) ? 'homeassistant' : 'yaml';
+  return EXTENSIONS[name.split('.').pop() || ''] || 'text';
 }
+
+/** Dotfiles, dot folders and anything inside them (.storage, .cache, .git…). */
+export const isHidden = (path: string) => path.split('/').some(part => part.startsWith('.'));

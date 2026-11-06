@@ -88,3 +88,92 @@ test('bounds workspace search result counts', async () => {
   assert.equal(result.matches.length, 500);
   assert.equal(result.limited, true);
 });
+
+test('renames files and folders without overwriting or escaping the configuration directory', async () => {
+  const { root, directory, request } = await fixture();
+  const post = (route, body) => request(route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await fs.mkdir(path.join(root, 'packages'));
+  await fs.writeFile(path.join(root, 'packages', 'lights.yaml'), 'light:\n');
+  await fs.writeFile(path.join(root, 'scripts.yaml'), '');
+  const renamed = await post('rename', { from: 'packages/lights.yaml', to: 'packages/lighting.yaml' });
+  assert.equal(renamed.status, 200);
+  assert.deepEqual(await renamed.json(), { path: 'packages/lighting.yaml' });
+  assert.equal(await fs.readFile(path.join(root, 'packages', 'lighting.yaml'), 'utf8'), 'light:\n');
+  assert.equal((await post('rename', { from: 'packages', to: 'includes' })).status, 200);
+  assert.equal(await fs.readFile(path.join(root, 'includes', 'lighting.yaml'), 'utf8'), 'light:\n');
+  assert.equal((await post('rename', { from: 'scripts.yaml', to: 'configuration.yaml' })).status, 409);
+  assert.equal(await fs.readFile(path.join(root, 'configuration.yaml'), 'utf8'), 'default_config:\n');
+  assert.equal((await post('rename', { from: 'includes', to: 'includes/nested' })).status, 400);
+  assert.equal((await post('rename', { from: '', to: 'other' })).status, 400);
+  assert.equal((await post('rename', { from: 'scripts.yaml', to: '../outside.yaml' })).status, 400);
+  assert.equal((await post('rename', { from: 'scripts.yaml', to: 'missing/scripts.yaml' })).status, 404);
+  assert.equal((await post('rename', { from: 'missing.yaml', to: 'other.yaml' })).status, 404);
+  await fs.symlink(directory, path.join(root, 'link'));
+  assert.equal((await post('rename', { from: 'scripts.yaml', to: 'link/scripts.yaml' })).status, 403);
+  assert.equal((await post('rename', { from: 'link', to: 'renamed-link' })).status, 403);
+});
+
+test('deletes files and folders inside the configuration directory only', async () => {
+  const { root, directory, request } = await fixture();
+  const post = (route, body) => request(route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await fs.mkdir(path.join(root, 'packages', 'nested'), { recursive: true });
+  await fs.writeFile(path.join(root, 'packages', 'nested', 'a.yaml'), '');
+  await fs.writeFile(path.join(directory, 'keep'), 'outside');
+  await fs.symlink(path.join(directory, 'keep'), path.join(root, 'link'));
+  assert.equal((await post('delete', { path: 'packages' })).status, 200);
+  assert.equal(await fs.stat(path.join(root, 'packages')).catch(() => null), null);
+  assert.equal((await post('delete', { path: 'configuration.yaml' })).status, 200);
+  assert.equal((await post('delete', { path: '' })).status, 400);
+  assert.equal((await post('delete', { path: '.' })).status, 400);
+  assert.equal((await post('delete', { path: '../keep' })).status, 400);
+  assert.equal((await post('delete', { path: 'link' })).status, 403);
+  assert.equal((await post('delete', { path: 'missing' })).status, 404);
+  assert.equal(await fs.readFile(path.join(directory, 'keep'), 'utf8'), 'outside');
+  assert.equal((await request('delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }, body: '{"path":"x"}' })).status, 403);
+});
+
+test('reports the Home Assistant version from .HA_VERSION when present', async () => {
+  const { root, request } = await fixture();
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: null });
+  await fs.writeFile(path.join(root, '.HA_VERSION'), '2026.11.0\n');
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: '2026.11.0' });
+});
+
+test('creates files and folders without overwriting', async () => {
+  const { root, directory, request } = await fixture();
+  const post = (route, body) => request(route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const folder = await post('create', { path: 'packages', directory: true });
+  assert.equal(folder.status, 200);
+  assert.deepEqual(await folder.json(), { path: 'packages' });
+  assert.equal((await fs.stat(path.join(root, 'packages'))).isDirectory(), true);
+  assert.equal((await post('create', { path: 'packages/lights.yaml' })).status, 200);
+  assert.equal(await fs.readFile(path.join(root, 'packages', 'lights.yaml'), 'utf8'), '');
+  assert.equal((await post('create', { path: 'configuration.yaml' })).status, 409);
+  assert.equal(await fs.readFile(path.join(root, 'configuration.yaml'), 'utf8'), 'default_config:\n');
+  assert.equal((await post('create', { path: 'packages', directory: true })).status, 409);
+  assert.equal((await post('create', { path: '../outside.yaml' })).status, 400);
+  assert.equal((await post('create', { path: '' })).status, 400);
+  assert.equal((await post('create', { path: 'missing/new.yaml' })).status, 404);
+  await fs.symlink(directory, path.join(root, 'link'));
+  assert.equal((await post('create', { path: 'link/new.yaml' })).status, 403);
+});
+
+test('serves images for preview with safe headers and rejects other files', async () => {
+  const { root, directory, request } = await fixture();
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a4b00000000049454e44ae426082', 'hex');
+  await fs.mkdir(path.join(root, 'www'));
+  await fs.writeFile(path.join(root, 'www', 'dot.png'), png);
+  await fs.writeFile(path.join(root, 'www', 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  const image = await request('image?path=www%2Fdot.png');
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await image.arrayBuffer()), png);
+  const svg = await request('image?path=www%2Ficon.svg');
+  assert.equal(svg.headers.get('content-type'), 'image/svg+xml');
+  assert.match(svg.headers.get('content-security-policy'), /sandbox/);
+  assert.equal((await request('image?path=configuration.yaml')).status, 415);
+  assert.equal((await request('image?path=..%2Fsecret.png')).status, 400);
+  await fs.writeFile(path.join(directory, 'outside.png'), png);
+  await fs.symlink(path.join(directory, 'outside.png'), path.join(root, 'link.png'));
+  assert.equal((await request('image?path=link.png')).status, 403);
+});
