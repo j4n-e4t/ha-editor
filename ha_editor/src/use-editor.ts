@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monaco, language, parsed, validate, watchTheme } from './monaco';
 import { yamlPath } from './yaml-path';
-import { isImage } from './file-kind';
+import { previewKind, type PreviewKind } from './file-kind';
 import { api, type Match } from './lib/api';
 
 export type Breadcrumb = { label: string; line: number; column: number };
-const initial = { path: '', image: false, version: '', dirty: false, saving: false, loading: false, line: 1, column: 1, selected: 0, tabSize: 2, spaces: true, eol: 'LF', language: 'Plain Text' };
+const initial = { path: '', preview: null as PreviewKind | null, version: '', dirty: false, saving: false, loading: false, line: 1, column: 1, selected: 0, tabSize: 2, spaces: true, eol: 'LF', language: 'Plain Text' };
 export function useEditor() {
   const container = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const current = useRef({ path: '', image: false, version: '', saved: '', saving: false, loading: false });
+  const current = useRef({ path: '', preview: null as PreviewKind | null, version: '', saved: '', saving: false, loading: false });
   const [state, setState] = useState(initial);
   const [error, setError] = useState('');
   const [crumbs, setCrumbs] = useState<Breadcrumb[]>([]);
@@ -27,7 +27,7 @@ export function useEditor() {
     const ed = editor.current; const model = ed?.getModel(); const pos = ed?.getPosition(); const selection = ed?.getSelection();
     const options = model?.getOptions();
     const labels: Record<string, string> = { yaml: 'YAML', json: 'JSON', plaintext: 'Plain Text', python: 'Python', javascript: 'JavaScript', shell: 'Shell', xml: 'XML', ini: 'INI' };
-    setState({ path: current.current.path, image: current.current.image, version: current.current.version, dirty: !!model && model.getValue() !== current.current.saved, saving: current.current.saving, loading: current.current.loading,
+    setState({ path: current.current.path, preview: current.current.preview, version: current.current.version, dirty: !!model && model.getValue() !== current.current.saved, saving: current.current.saving, loading: current.current.loading,
       line: pos?.lineNumber || 1, column: pos?.column || 1, selected: selection && model ? model.getValueInRange(selection).length : 0,
       tabSize: options?.tabSize || 2, spaces: options?.insertSpaces ?? true, eol: model?.getEOL() === '\r\n' ? 'CRLF' : 'LF', language: labels[model?.getLanguageId() || 'plaintext'] || 'Plain Text' });
   }, []);
@@ -49,16 +49,17 @@ export function useEditor() {
     const ed = editor.current; const file = current.current; if (!ed || file.loading || file.saving) return;
     if (path === file.path && match) { reveal(match); return; }
     if (ed.getModel() && ed.getValue() !== file.saved && !confirm('Discard unsaved changes and open another file?')) return;
-    if (isImage(path)) { // Images are shown by the preview; the text editor is cleared.
+    const preview = previewKind(path);
+    if (preview) { // Images, audio and video are shown by the preview; the text editor is cleared.
       const old = ed.getModel(); ed.setModel(null); old?.dispose();
-      Object.assign(file, { path, image: true, version: String(Date.now()), saved: '' }); setError(''); sync(); return;
+      Object.assign(file, { path, preview, version: String(Date.now()), saved: '' }); setError(''); sync(); return;
     }
     file.loading = true; ed.updateOptions({ readOnly: true }); setError(''); sync();
     try {
       const result = await api<{ content: string; version: string }>(`file?path=${encodeURIComponent(path)}`);
       if (editor.current !== ed) return;
       const model = monaco.editor.createModel(result.content, language(path)); model.detectIndentation(true, 2);
-      const old = ed.getModel(); file.path = path; file.image = false; file.version = result.version; file.saved = result.content;
+      const old = ed.getModel(); file.path = path; file.preview = null; file.version = result.version; file.saved = result.content;
       ed.setModel(model); old?.dispose(); validate(model); if (match) reveal(match);
     } catch (e) { setError((e as Error).message); }
     finally { file.loading = false; if (editor.current === ed) { ed.updateOptions({ readOnly: false }); sync(); ed.focus(); } }
@@ -82,6 +83,7 @@ export function useEditor() {
     const file = current.current; const model = editor.current?.getModel();
     if (!file.path || (file.path !== from && !file.path.startsWith(`${from}/`))) return;
     file.path = to + file.path.slice(from.length);
+    if (file.preview) { file.preview = previewKind(file.path) ?? file.preview; file.version = String(Date.now()); }
     if (model) { monaco.editor.setModelLanguage(model, language(file.path)); validate(model); }
     sync();
   }, [sync]);
@@ -90,7 +92,7 @@ export function useEditor() {
     const file = current.current; const ed = editor.current;
     if (!ed || !file.path || (file.path !== path && !file.path.startsWith(`${path}/`))) return;
     const model = ed.getModel(); ed.setModel(null); model?.dispose();
-    file.path = ''; file.image = false; file.version = ''; file.saved = ''; sync();
+    file.path = ''; file.preview = null; file.version = ''; file.saved = ''; sync();
   }, [sync]);
   const goTo = useCallback((line: number, column: number) => {
     const ed = editor.current; if (!ed?.getModel()) return;

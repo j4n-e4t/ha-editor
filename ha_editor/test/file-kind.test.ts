@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileKind, isHidden, isImage } from '../src/file-kind.ts';
+import { fileKind, isHidden, isImage, previewKind } from '../src/file-kind.ts';
 
 test('treats YAML in the configuration root and Home Assistant folders as Home Assistant files', () => {
-  for (const path of ['configuration.yaml', 'automations.yaml', 'mqtt.yaml', 'input_selects.yaml', 'loggers.yaml', 'secrets.yaml', 'packages/climate.yaml', 'blueprints/automation/motion.yaml', 'themes/dark.yaml'])
+  for (const path of ['configuration.yaml', 'automations.yaml', 'mqtt.yaml', 'input_selects.yaml', 'loggers.yaml', 'secrets.yaml', 'packages/climate.yaml', 'blueprints/automation/motion.yaml'])
     assert.equal(fileKind(path), 'homeassistant', path);
   assert.equal(fileKind('zigbee2mqtt/configuration.yaml'), 'yaml');
+  for (const path of ['themes/amoled-black.yaml', 'custom_components/hacs/services.yaml', 'dashboards/home.yaml']) assert.equal(fileKind(path), 'yaml', path);
   assert.equal(fileKind('www/custom.yaml'), 'yaml');
 });
 
@@ -56,4 +57,16 @@ test('recognizes images for the preview', () => {
   assert.equal(isImage('www/logo.png'), true);
   assert.equal(isImage('www/logo.png.yaml'), false);
   assert.equal(fileKind('www', true), 'www');
+});
+
+test('recognizes audio and video for the player', () => {
+  assert.equal(fileKind('tts/452db2f25b32748e0295e7_en_-_tts.cloud.mp3'), 'audio');
+  assert.equal(fileKind('tts/entry_delay.mp3'), 'audio');
+  assert.equal(fileKind('media/doorbell.wav'), 'audio');
+  assert.equal(fileKind('media/clip.mp4'), 'video');
+  assert.equal(fileKind('media/clip.webm'), 'video');
+  assert.equal(previewKind('www/logo.png'), 'image');
+  assert.equal(previewKind('tts/entry_delay.mp3'), 'audio');
+  assert.equal(previewKind('media/clip.MOV'), 'video');
+  assert.equal(previewKind('configuration.yaml'), null);
 });

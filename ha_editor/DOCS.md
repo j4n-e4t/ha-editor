@@ -6,14 +6,14 @@ After starting the add-on, open **Editor** in the Home Assistant sidebar (enable
 
 ## Editing
 
-The file tree marks YAML files in the configuration root and in Home Assistant folders such as `packages/` and `blueprints/` with the Home Assistant logo. The `esphome` folder and the YAML inside it get the ESPHome logo. Well-known folders such as `blueprints`, `themes`, `www`, `zigbee2mqtt` and `homematicip_local` have their own icons, as do databases and logs, and dotfiles and dot folders (`.storage`, `.cache`, …) are dimmed.
+The file tree marks Home Assistant configuration with the Home Assistant logo: YAML files in the configuration root and in folders such as `packages/`, `automations/` and `blueprints/`. Other YAML, such as themes or `custom_components`, shows a plain YAML icon. The `esphome` folder and the YAML inside it get the ESPHome logo. Well-known folders such as `blueprints`, `themes`, `www`, `zigbee2mqtt` and `homematicip_local` have their own icons, as do databases and logs, and dotfiles and dot folders (`.storage`, `.cache`, …) are dimmed, as are files that cannot be opened (binary, non-UTF-8 text, or larger than 2 MB).
 
 
 Select a file, edit, then click Save or press Ctrl/Cmd+S. Select the current file again to reload it; dirty buffers require confirmation before discarding. Refresh reloads the tree. Use the find and replace buttons beside Save, or press Ctrl/Cmd+F for find and Ctrl+H (Cmd+Option+F on macOS) for replace. These use Monaco's native controls, including match case, whole word, and regular expressions.
 
 Open the Search sidebar tab or press Ctrl/Cmd+Shift+F to search across saved configuration files. Workspace search is literal, with an optional match-case toggle. Select a result to open the file at the matching location. Unsaved editor changes are searched by current-file find; save them before searching across files. Search excludes symlinks, binary/non-UTF-8 files, files over 2 MB, `.git`, `node_modules`, and `__pycache__`. Results are capped at 500 matches, with a scan budget of 2,000 files, 32 MB, or five seconds; a message indicates partial results.
 
-Images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG up to 25 MB) open in a preview instead of the editor. They fit the pane; click to toggle actual size. The status bar shows their dimensions, file size and type. Images are view-only, and SVGs are displayed with scripts disabled.
+Images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG up to 25 MB) open in a preview instead of the editor. They fit the pane; click to toggle actual size. Audio (MP3, WAV, OGG, Opus, FLAC, M4A, AAC) and video (MP4, MOV, WebM, OGV, MKV) play in the browser's own player, with seeking; which formats play depends on your browser. The status bar shows dimensions, duration, file size and type. Media files are view-only, and SVGs are displayed with scripts disabled.
 
 The bar above the editor shows where you are: the file's folders, the file, and the YAML key path at the cursor, for example `automation › Morning lights › triggers › time`. List items are named by their `alias`, `name` or `id` when they have one. Click a part of the path to jump to it, or the file name to go to the top. A dot after the file name marks unsaved changes.
 

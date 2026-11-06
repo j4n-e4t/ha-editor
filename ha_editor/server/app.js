@@ -6,7 +6,11 @@ import { createHash, randomUUID } from 'node:crypto';
 
 const MAX_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
-const IMAGE_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon', svg: 'image/svg+xml' };
+const MEDIA_TYPES = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon', svg: 'image/svg+xml',
+  mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', flac: 'audio/flac', m4a: 'audio/mp4', aac: 'audio/aac', weba: 'audio/webm',
+  mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', ogv: 'video/ogg', mkv: 'video/x-matroska',
+};
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
@@ -21,7 +25,7 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
   });
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    if (req.method !== 'GET' && (req.get('sec-fetch-site') === 'cross-site' || !req.is('application/json'))) return res.status(403).json({ error: 'Only same-site JSON requests are accepted.' });
+    if (req.method !== 'GET' && req.method !== 'HEAD' && (req.get('sec-fetch-site') === 'cross-site' || !req.is('application/json'))) return res.status(403).json({ error: 'Only same-site JSON requests are accepted.' });
     next();
   });
   app.use(express.json({ limit: '3mb' }));
@@ -47,10 +51,34 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
     catch { throw fail(415, 'Only UTF-8 text files can be edited.'); }
     return { content, version: hash(bytes), mode: stat.mode };
   }
+  // A file can be opened when it is media (previewed) or small UTF-8 text. Only the first 8 KB is
+  // inspected, so a listing stays fast; files that cannot be opened are flagged for the tree to dim.
+  async function unreadable(target, size) {
+    if (MEDIA_TYPES[path.extname(target).slice(1).toLowerCase()]) return false;
+    if (size > MAX_SIZE) return true;
+    let handle;
+    try {
+      handle = await fs.open(target, 'r');
+      const { buffer, bytesRead } = await handle.read(Buffer.alloc(8192), 0, 8192, 0);
+      const head = buffer.subarray(0, bytesRead);
+      if (head.includes(0)) return true;
+      // When the read stopped before the end of the file, a final character cut in half is fine.
+      new TextDecoder('utf-8', { fatal: true }).decode(head, { stream: size > bytesRead });
+      return false;
+    } catch { return true; }
+    finally { await handle?.close(); }
+  }
   app.get('/api/tree', async (req, res) => {
     const target = await resolve(req.query.path);
-    const entries = await fs.readdir(target, { withFileTypes: true });
-    res.json(entries.filter(e => !e.isSymbolicLink() && (e.isDirectory() || e.isFile())).map(e => ({ name: e.name, directory: e.isDirectory() })).sort((a, b) => Number(b.directory) - Number(a.directory) || a.name.localeCompare(b.name)));
+    const entries = (await fs.readdir(target, { withFileTypes: true })).filter(e => !e.isSymbolicLink() && (e.isDirectory() || e.isFile()));
+    const listed = await Promise.all(entries.map(async (entry, index) => {
+      if (entry.isDirectory()) return { name: entry.name, directory: true };
+      const file = path.join(target, entry.name);
+      // Very large folders (TTS caches, recordings) skip the check beyond the first 1,000 files.
+      const binary = index < 1000 ? await fs.stat(file).then(stat => unreadable(file, stat.size), () => false) : false;
+      return binary ? { name: entry.name, directory: false, binary: true } : { name: entry.name, directory: false };
+    }));
+    res.json(listed.sort((a, b) => Number(b.directory) - Number(a.directory) || a.name.localeCompare(b.name)));
   });
   app.get('/api/file', async (req, res) => {
     const { content, version } = await read(await resolve(req.query.path));
@@ -66,16 +94,17 @@ export async function createApp(rootPath, { ingressOnly = false } = {}) {
     } catch {} // Missing outside Home Assistant (or before its first start).
     res.json({ homeAssistantVersion });
   });
-  // Read-only image preview. Only image types are served, and SVGs run with scripts disabled.
-  app.get('/api/image', async (req, res) => {
+  // Read-only media preview for images, audio and video. Only media types are served, with Range
+  // support so players can seek and stream; SVGs run with scripts disabled.
+  app.get('/api/media', async (req, res, next) => {
     const target = await resolve(req.query.path);
-    const type = IMAGE_TYPES[path.extname(target).slice(1).toLowerCase()];
+    const type = MEDIA_TYPES[path.extname(target).slice(1).toLowerCase()];
     if (!type) throw fail(415, 'This file type cannot be previewed.');
     const stat = await fs.stat(target);
     if (!stat.isFile()) throw fail(400, 'Select a regular file.');
-    if (stat.size > MAX_IMAGE_SIZE) throw fail(413, 'Images larger than 25 MB cannot be previewed.');
-    res.set({ 'Content-Type': type, 'Content-Length': String(stat.size), 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" });
-    res.send(await fs.readFile(target));
+    if (type.startsWith('image/') && stat.size > MAX_IMAGE_SIZE) throw fail(413, 'Images larger than 25 MB cannot be previewed.');
+    res.set({ 'Content-Type': type, 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" });
+    res.sendFile(target, { dotfiles: 'allow', acceptRanges: true, cacheControl: false, lastModified: false }, error => { if (error && !res.headersSent) next(error); });
   });
   app.get('/api/search', async (req, res) => {
     const query = req.query.q;

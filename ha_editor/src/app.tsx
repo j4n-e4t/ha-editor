@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileTree } from '@/components/file-tree';
 import { SearchPanel } from '@/components/search-panel';
 import { FileIcon } from '@/components/file-icon';
-import { ImageViewer, formatBytes, type ImageInfo } from '@/components/image-viewer';
+import { MediaViewer, formatBytes, formatDuration, type MediaInfo } from '@/components/media-viewer';
 import { useEditor } from '@/use-editor';
 import { useHomeAssistant } from '@/lib/home-assistant';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const searchInput = useRef<HTMLInputElement>(null);
   const [haVersion, setHaVersion] = useState<string | null>(null);
-  const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
+  const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   useEffect(() => { api<{ homeAssistantVersion: string | null }>('info').then(info => setHaVersion(info.homeAssistantVersion), () => {}); }, []);
   useEffect(() => setSidebar(!narrow), [narrow]);
   const showSearch = useCallback(() => { setSidebar(true); setTab('search'); requestAnimationFrame(() => searchInput.current?.select()); }, []);
@@ -60,8 +60,8 @@ export function App() {
       <header className="flex h-[var(--header-height)] shrink-0 items-center gap-1 bg-header px-3 py-2 text-header-foreground [border-bottom:var(--app-header-border-bottom)] max-sm:px-1">
         <IconButton label={sidebar ? 'Hide files' : 'Show files'} aria-expanded={sidebar} onClick={() => setSidebar(v => !v)}><SidebarIcon /></IconButton>
         <h1 className={cn('m-0 min-w-0 flex-1 truncate text-xl leading-normal font-normal', narrow ? 'ml-2' : 'ml-6')}>Editor</h1>
-        <IconButton label={`Find (${mod}+F)`} disabled={!state.path || state.image} onClick={() => find()}><Search /></IconButton>
-        <IconButton label="Replace" disabled={!state.path || state.image} onClick={() => find(true)} className="max-sm:hidden"><Replace /></IconButton>
+        <IconButton label={`Find (${mod}+F)`} disabled={!state.path || !!state.preview} onClick={() => find()}><Search /></IconButton>
+        <IconButton label="Replace" disabled={!state.path || !!state.preview} onClick={() => find(true)} className="max-sm:hidden"><Replace /></IconButton>
         <Button title={`Save (${mod}+S)`} disabled={!state.dirty || state.saving || state.loading} onClick={() => void save()}
           className="mr-1 ml-2 h-10 rounded-full px-5 text-sm font-medium shadow-none disabled:bg-hover disabled:text-muted-foreground disabled:opacity-100 max-sm:ml-1 max-sm:px-4">
           {state.saving ? 'Saving…' : 'Save'}
@@ -134,7 +134,7 @@ export function App() {
           )}
           <div className="relative min-h-0 flex-1">
             <div ref={container} className="absolute inset-0" />
-            {state.image && <ImageViewer path={state.path} version={state.version} onInfo={setImageInfo} />}
+            {state.preview && <MediaViewer path={state.path} kind={state.preview} version={state.version} onInfo={setMediaInfo} />}
           </div>
           {!state.path && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
@@ -150,14 +150,15 @@ export function App() {
         <span className="flex items-center gap-1.5 max-sm:hidden" title="Home Assistant version">
           {haVersion && <><FileIcon path="configuration.yaml" />Home Assistant {haVersion}</>}
         </span>
-        {state.image && imageInfo && (
+        {state.preview && mediaInfo && (
           <div className="flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5">
-            <span title="Dimensions">{imageInfo.width} × {imageInfo.height}</span>
-            <span title="File size">{formatBytes(imageInfo.bytes)}</span>
-            <span title="Type">{imageInfo.type.replace('image/', '').replace('svg+xml', 'svg').toUpperCase()}</span>
+            {mediaInfo.width ? <span title="Dimensions">{mediaInfo.width} × {mediaInfo.height}</span> : null}
+            {mediaInfo.duration !== undefined && <span title="Duration">{formatDuration(mediaInfo.duration)}</span>}
+            {mediaInfo.bytes !== undefined && <span title="File size">{formatBytes(mediaInfo.bytes)}</span>}
+            {mediaInfo.type && <span title="Type">{mediaInfo.type.split('/')[1].replace('svg+xml', 'svg').replace('mpeg', 'mp3').replace('x-', '').toUpperCase()}</span>}
           </div>
         )}
-        {state.path && !state.image && (
+        {state.path && !state.preview && (
           <div className="flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5">
             <span>Ln {state.line}, Col {state.column}{state.selected ? ` (${state.selected} selected)` : ''}</span>
             <span>{state.spaces ? 'Spaces' : 'Tab Size'}: {state.tabSize}</span>

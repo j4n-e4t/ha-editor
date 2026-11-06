@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5
+
+- Play audio (MP3, WAV, OGG, Opus, FLAC, M4A, AAC) and video (MP4, MOV, WebM, OGV, MKV) files with the browser's own players, with seeking. The status bar shows duration, size and type, plus dimensions for video. Useful for `tts/` and `media/`.
+- Theme, dashboard and `custom_components` YAML files show a plain YAML icon; the Home Assistant icon is for configuration files.
+- Files that cannot be opened (binary, non-UTF-8 or larger than 2 MB, such as databases) are dimmed in the tree like dotfiles. Images, audio and video are not, since they open in the preview.
+- Brand colors for the Zigbee2MQTT (yellow), ESPHome (blue) and Homematic IP (blue) icons.
+
 ## 0.1.4
 
 - Native Home Assistant look: a 56px panel toolbar titled “Editor”, matching Home Assistant's own, with a pill Save button.

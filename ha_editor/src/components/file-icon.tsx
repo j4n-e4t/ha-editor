@@ -1,4 +1,4 @@
-import { Database, File, FileCode2, FileImage, FileJson, FileText, Folder, FolderOpen, Globe, Image, Palette, ScrollText, Speech, SquarePlay, SwatchBook, Terminal, type LucideIcon } from 'lucide-react';
+import { Database, File, FileAudio, FileCode2, FileImage, FileJson, FileVideo, FileText, Folder, FolderOpen, Globe, Image, Palette, ScrollText, Speech, SquarePlay, SwatchBook, Terminal, type LucideIcon } from 'lucide-react';
 import { fileKind, type FileKind } from '@/file-kind';
 import haLogo from '@/assets/home-assistant.svg';
 import espLogo from '@/assets/esphome.svg';
@@ -9,17 +9,17 @@ import { cn } from '@/lib/utils';
 // Brand logos are drawn as masks so they follow the theme like the other icons.
 const BRANDS: Partial<Record<FileKind, { label: string; src: string; color: string }>> = {
   homeassistant: { label: 'Home Assistant', src: haLogo, color: 'bg-primary' },
-  esphome: { label: 'ESPHome', src: espLogo, color: 'bg-foreground' },
-  zigbee2mqtt: { label: 'Zigbee2MQTT', src: z2mLogo, color: 'bg-muted-foreground' },
-  homematicip: { label: 'Homematic IP', src: hmipLogo, color: 'bg-muted-foreground' },
+  esphome: { label: 'ESPHome', src: espLogo, color: 'bg-primary' },
+  zigbee2mqtt: { label: 'Zigbee2MQTT', src: z2mLogo, color: 'bg-[#e8a800] dark:bg-[#ffc135]' },
+  homematicip: { label: 'Homematic IP', src: hmipLogo, color: 'bg-[#005282] dark:bg-[#2f6fa8]' },
 };
 const ICONS: Partial<Record<FileKind, LucideIcon>> = {
-  json: FileJson, yaml: FileCode2, code: FileCode2, python: FileCode2, shell: Terminal, database: Database, log: ScrollText, picture: FileImage, text: FileText,
+  json: FileJson, yaml: FileCode2, code: FileCode2, python: FileCode2, shell: Terminal, database: Database, log: ScrollText, picture: FileImage, audio: FileAudio, video: FileVideo, text: FileText,
   blueprints: SwatchBook, image: Image, media: SquarePlay, themes: Palette, tts: Speech, www: Globe,
 };
 const COLORS: Partial<Record<FileKind, string>> = {
   yaml: 'text-primary', json: 'text-amber-600 dark:text-amber-400', code: 'text-purple-500', python: 'text-sky-700 dark:text-sky-400',
-  database: 'text-teal-600 dark:text-teal-400', picture: 'text-rose-500 dark:text-rose-400',
+  database: 'text-teal-600 dark:text-teal-400', picture: 'text-rose-500 dark:text-rose-400', audio: 'text-violet-500 dark:text-violet-400', video: 'text-orange-500 dark:text-orange-400',
 };
 
 export function FileIcon({ path, directory = false, open = false }: { path: string; directory?: boolean; open?: boolean }) {

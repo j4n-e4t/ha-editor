@@ -158,22 +158,46 @@ test('creates files and folders without overwriting', async () => {
   assert.equal((await post('create', { path: 'link/new.yaml' })).status, 403);
 });
 
-test('serves images for preview with safe headers and rejects other files', async () => {
+test('serves media for preview with safe headers and rejects other files', async () => {
   const { root, directory, request } = await fixture();
   const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a4b00000000049454e44ae426082', 'hex');
   await fs.mkdir(path.join(root, 'www'));
   await fs.writeFile(path.join(root, 'www', 'dot.png'), png);
   await fs.writeFile(path.join(root, 'www', 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
-  const image = await request('image?path=www%2Fdot.png');
+  const image = await request('media?path=www%2Fdot.png');
   assert.equal(image.status, 200);
   assert.equal(image.headers.get('content-type'), 'image/png');
   assert.deepEqual(Buffer.from(await image.arrayBuffer()), png);
-  const svg = await request('image?path=www%2Ficon.svg');
+  const svg = await request('media?path=www%2Ficon.svg');
   assert.equal(svg.headers.get('content-type'), 'image/svg+xml');
   assert.match(svg.headers.get('content-security-policy'), /sandbox/);
-  assert.equal((await request('image?path=configuration.yaml')).status, 415);
-  assert.equal((await request('image?path=..%2Fsecret.png')).status, 400);
+  assert.equal((await request('media?path=configuration.yaml')).status, 415);
+  await fs.writeFile(path.join(root, 'www', 'chime.mp3'), Buffer.alloc(1000, 7));
+  const audio = await request('media?path=www%2Fchime.mp3');
+  assert.equal(audio.headers.get('content-type'), 'audio/mpeg');
+  assert.equal(audio.headers.get('accept-ranges'), 'bytes');
+  const head = await request('media?path=www%2Fchime.mp3', { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers.get('content-length'), '1000');
+  const part = await request('media?path=www%2Fchime.mp3', { headers: { Range: 'bytes=100-199' } });
+  assert.equal(part.status, 206);
+  assert.equal(part.headers.get('content-range'), 'bytes 100-199/1000');
+  assert.equal((await part.arrayBuffer()).byteLength, 100);
+  assert.equal((await request('media?path=..%2Fsecret.png')).status, 400);
   await fs.writeFile(path.join(directory, 'outside.png'), png);
   await fs.symlink(path.join(directory, 'outside.png'), path.join(root, 'link.png'));
-  assert.equal((await request('image?path=link.png')).status, 403);
+  assert.equal((await request('media?path=link.png')).status, 403);
+});
+
+test('flags files that cannot be opened so the tree can dim them', async () => {
+  const { root, request } = await fixture();
+  await fs.writeFile(path.join(root, 'zigbee.db'), Buffer.from([0x53, 0x51, 0x4c, 0, 1, 2]));
+  await fs.writeFile(path.join(root, 'latin1.txt'), Buffer.from([0x63, 0x61, 0x66, 0xe9]));
+  await fs.writeFile(path.join(root, 'home-assistant.log'), 'INFO started\n');
+  await fs.writeFile(path.join(root, 'huge.yaml'), Buffer.alloc(2 * 1024 * 1024 + 1, 'a'));
+  await fs.writeFile(path.join(root, 'photo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0]));
+  await fs.writeFile(path.join(root, 'cut.yaml'), Buffer.concat([Buffer.alloc(8191, 'a'), Buffer.from('é')]));
+  await fs.mkdir(path.join(root, 'packages'));
+  const tree = Object.fromEntries((await (await request('tree')).json()).map(e => [e.name, !!e.binary]));
+  assert.deepEqual(tree, { packages: false, 'configuration.yaml': false, 'cut.yaml': false, 'home-assistant.log': false, 'huge.yaml': true, 'latin1.txt': true, 'photo.png': false, 'zigbee.db': true });
 });

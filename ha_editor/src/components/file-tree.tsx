@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { isHidden } from '@/file-kind';
 
-type Entry = { name: string; directory: boolean };
+type Entry = { name: string; directory: boolean; binary?: boolean };
 const join = (parent: string, name: string) => parent ? `${parent}/${name}` : name;
 const parentOf = (path: string) => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1);
@@ -172,7 +172,7 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
     event.preventDefault(); next?.focus();
   }
 
-  function row(path: string, name: string, directory: boolean, depth: number) {
+  function row(path: string, name: string, directory: boolean, depth: number, binary = false) {
     const open = directory && expanded.has(path);
     const Chevron = open ? ChevronDown : ChevronRight;
     if (renaming === path) return (
@@ -184,11 +184,11 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
       </div>
     );
     return (
-      <button type="button" data-tree-row data-path={path} title={path || 'config'} aria-expanded={directory ? open : undefined} aria-current={path === active && !directory ? 'true' : undefined}
+      <button type="button" data-tree-row data-path={path} title={binary ? `${path} · cannot be opened` : path || 'config'} aria-expanded={directory ? open : undefined} aria-current={path === active && !directory ? 'true' : undefined}
         onClick={() => directory ? void toggle(path) : onOpen(path)}
         className={cn('relative flex h-8 w-full items-center gap-1.5 whitespace-nowrap rounded-sm pr-2 text-left text-sidebar-foreground outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
           !depth && 'font-medium', path === active && !directory && 'bg-selected font-medium text-sidebar-selected hover:bg-selected',
-          isHidden(path) && path !== active && 'opacity-50 hover:opacity-80')}
+          (isHidden(path) || binary) && path !== active && 'opacity-50 hover:opacity-80')}
         style={{ paddingLeft: 4 + depth * 16 }}>
         {directory ? <Chevron aria-hidden className="size-4 shrink-0 text-icon" /> : <span className="w-4 shrink-0" />}
         <FileIcon path={path || 'config'} directory={directory} open={open} />
@@ -215,7 +215,7 @@ export function FileTree({ active, dirty, refreshKey, onRefresh, onOpen, onError
         {list.map(entry => {
           const child = join(path, entry.name);
           return <div key={child}>
-            {row(child, entry.name, entry.directory, depth)}
+            {row(child, entry.name, entry.directory, depth, entry.binary)}
             {entry.directory && expanded.has(child) && children(child, depth + 1)}
           </div>;
         })}
