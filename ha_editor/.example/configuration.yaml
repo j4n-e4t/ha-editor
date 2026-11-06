@@ -1,0 +1,13 @@
+# Welcome home.
+# Your Home Assistant configuration starts here.
+default_config:
+
+homeassistant:
+  name: Home
+  unit_system: metric
+  time_zone: Europe/Berlin
+
+# Split your configuration into smaller files.
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml

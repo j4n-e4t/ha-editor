@@ -1,0 +1,9 @@
+- id: evening_lights
+  alias: Turn on the lights at sunset
+  triggers:
+    - trigger: sun
+      event: sunset
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id: light.living_room

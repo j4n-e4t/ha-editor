@@ -1,0 +1,8 @@
+# Climate settings
+input_number:
+  target_temperature:
+    name: Target temperature
+    min: 16
+    max: 26
+    step: 0.5
+    unit_of_measurement: °C

@@ -1,0 +1,9 @@
+blueprint:
+  name: Motion-activated light
+  domain: automation
+  input:
+    motion_sensor:
+      name: Motion sensor
+      selector:
+        entity:
+          domain: binary_sensor

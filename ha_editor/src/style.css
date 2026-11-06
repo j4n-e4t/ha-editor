@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+/* Home Assistant palette mapped onto shadcn tokens. Dark mode follows the system preference. */
+:root {
+  --background: #fafafa;
+  --foreground: #141414;
+  --card: #ffffff;
+  --muted: #f1f1f1;
+  --muted-foreground: #5e5e5e;
+  --accent: #e5f4f8;
+  --accent-foreground: #141414;
+  --primary: #009ac7;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1f1;
+  --secondary-foreground: #141414;
+  --destructive: #db4437;
+  --destructive-foreground: #ffffff;
+  --border: #0000001f;
+  --input: #0000001f;
+  --ring: #009ac7;
+  --guide: #00000016;
+  --hover: #0000000a;
+  --radius: 0.5rem;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1c1c1c;
+    --foreground: #e1e1e1;
+    --card: #111111;
+    --muted: #262626;
+    --muted-foreground: #a0a0a0;
+    --accent: #002e3e;
+    --accent-foreground: #e1e1e1;
+    --primary: #18bcf2;
+    --primary-foreground: #002e3e;
+    --secondary: #262626;
+    --secondary-foreground: #e1e1e1;
+    --border: #ffffff1f;
+    --input: #ffffff24;
+    --ring: #18bcf2;
+    --guide: #ffffff1a;
+    --hover: #ffffff0b;
+  }
+}
+
+@theme inline {
+  --font-sans: Roboto, ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-guide: var(--guide);
+  --color-hover: var(--hover);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * { @apply border-border; }
+  html, body, #app { height: 100%; }
+  body { @apply m-0 bg-background text-foreground font-sans text-sm antialiased; }
+  button:not(:disabled) { cursor: pointer; }
+  mark { background: light-dark(#fff0b3, #685517); color: inherit; border-radius: 2px; }
+}

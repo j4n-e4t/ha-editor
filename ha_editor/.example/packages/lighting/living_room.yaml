@@ -1,0 +1,7 @@
+# Living room lighting
+light:
+  - platform: group
+    name: Living room
+    entities:
+      - light.floor_lamp
+      - light.ceiling
