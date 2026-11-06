@@ -9,7 +9,11 @@ COPY scripts ./scripts
 RUN bun run build
 
 FROM oven/bun:1.3.14-alpine
-LABEL io.hass.type="addon" io.hass.name="HA Editor" org.opencontainers.image.source="https://github.com/j4n-e4t/ha-editor"
+ARG BUILD_ARCH=amd64
+ARG BUILD_VERSION=dev
+LABEL io.hass.type="addon" io.hass.name="HA Editor" io.hass.arch="${BUILD_ARCH}" io.hass.version="${BUILD_VERSION}" \
+      org.opencontainers.image.source="https://github.com/j4n-e4t/ha-editor" \
+      org.opencontainers.image.description="A minimal file tree and Monaco editor add-on for Home Assistant"
 WORKDIR /app
 ENV NODE_ENV=production CONFIG_ROOT=/config PORT=8099 INGRESS_ONLY=true
 COPY package.json bun.lock ./

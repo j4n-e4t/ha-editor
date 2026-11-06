@@ -1,8 +1,9 @@
 name: HA Editor
-version: "0.1.1"
+version: "0.1.2"
 slug: ha_editor
 description: A minimal file tree and Monaco editor for your Home Assistant configuration
 url: https://github.com/j4n-e4t/ha-editor
+image: ghcr.io/j4n-e4t/{arch}-addon-ha_editor
 arch:
   - aarch64
   - amd64

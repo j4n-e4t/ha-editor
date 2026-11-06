@@ -15,7 +15,7 @@ Or add it manually:
 3. Find **HA Editor**, select **Install**, then **Start**. Turn on **Show in sidebar**.
 4. Open **Editor** from the sidebar.
 
-Requires Home Assistant OS or a Supervised installation on amd64 or aarch64 (for example a Raspberry Pi 4/5 or Home Assistant Green). The Supervisor builds the image on your device during installation, which takes a few minutes.
+Requires Home Assistant OS or a Supervised installation on amd64 or aarch64 (for example a Raspberry Pi 4/5 or Home Assistant Green). Installation downloads a prebuilt image from GitHub Container Registry; nothing is compiled on your device.
 
 See [the add-on documentation](ha_editor/DOCS.md) for usage details.
 
@@ -49,7 +49,9 @@ docker run --rm -p 127.0.0.1:8099:8099 -e INGRESS_ONLY=false -v /absolute/path/t
 
 ### Releasing
 
-Bump `version` in `ha_editor/config.yaml` and add an entry to `ha_editor/CHANGELOG.md`. Home Assistant offers the update once the commit is pushed.
+Bump `version` in `ha_editor/config.yaml` and add an entry to `ha_editor/CHANGELOG.md`, then push to `main`. CI builds `ghcr.io/j4n-e4t/amd64-addon-ha_editor` and `ghcr.io/j4n-e4t/aarch64-addon-ha_editor` on native runners and tags them with that version. Home Assistant may notice the new version before CI finishes; an update started in that window fails to pull and succeeds once the images are published, usually a few minutes later.
+
+To test the image without publishing, remove the `image:` line from `config.yaml` in a local add-on copy; the Supervisor then builds the Dockerfile on the device.
 
 ## Verification
 

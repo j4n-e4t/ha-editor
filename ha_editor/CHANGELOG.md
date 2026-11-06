@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Install prebuilt images from GitHub Container Registry instead of building on the device. Installing or updating is now a single image download.
+
 ## 0.1.1
 
 - Fix installation on x86 CPUs without AVX (for example Celeron and Atom mini PCs): the image build no longer runs the TypeScript type check, which crashed Bun and needed several GB of memory.
