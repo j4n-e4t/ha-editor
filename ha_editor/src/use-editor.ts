@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monaco, language, parsed, validate, watchTheme } from './monaco';
 import { yamlPath } from './yaml-path';
+import { registerHomeAssistantLanguage } from './ha-language';
 import { previewKind, type PreviewKind } from './file-kind';
 import { api, type Match } from './lib/api';
+import { enableVim, type VimMode } from './vim';
 
 export type Breadcrumb = { label: string; line: number; column: number };
 const initial = { path: '', preview: null as PreviewKind | null, version: '', dirty: false, saving: false, loading: false, line: 1, column: 1, selected: 0, tabSize: 2, spaces: true, eol: 'LF', language: 'Plain Text' };
-export function useEditor() {
+/** `vim` turns on Vim key bindings (the add-on's Vim mode option); null while the options load. */
+export function useEditor(vim: boolean | null = false) {
   const container = useRef<HTMLDivElement>(null);
+  const vimStatus = useRef<HTMLDivElement>(null);
+  const [vimMode, setVimMode] = useState<VimMode | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const current = useRef({ path: '', preview: null as PreviewKind | null, version: '', saved: '', saving: false, loading: false });
   const [state, setState] = useState(initial);
@@ -32,9 +37,12 @@ export function useEditor() {
       tabSize: options?.tabSize || 2, spaces: options?.insertSpaces ?? true, eol: model?.getEOL() === '\r\n' ? 'CRLF' : 'LF', language: labels[model?.getLanguageId() || 'plaintext'] || 'Plain Text' });
   }, []);
   useEffect(() => {
+    registerHomeAssistantLanguage();
     const ed = monaco.editor.create(container.current!, { automaticLayout: true, fontSize: 14, lineHeight: 24,
       fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace", minimap: { enabled: false }, scrollBeyondLastLine: false, padding: { top: 16 },
-      overviewRulerLanes: 0, hideCursorInOverviewRuler: true, tabSize: 2, insertSpaces: true, model: null, wordWrap: 'on' });
+      overviewRulerLanes: 0, hideCursorInOverviewRuler: true, tabSize: 2, insertSpaces: true, model: null, wordWrap: 'on',
+      // Values in YAML are strings, so suggest there too; words from the file would crowd out Home Assistant's.
+      quickSuggestions: { other: true, strings: true, comments: false }, wordBasedSuggestions: 'off', suggest: { showWords: false } });
     editor.current = ed; const unwatch = watchTheme(); let timer: ReturnType<typeof setTimeout>; let crumbTimer: ReturnType<typeof setTimeout>;
     const scheduleCrumbs = () => { clearTimeout(crumbTimer); crumbTimer = setTimeout(updateCrumbs, 60); };
     const disposables = [ed.onDidChangeCursorPosition(scheduleCrumbs), ed.onDidChangeModel(updateCrumbs), ed.onDidChangeModelLanguage(updateCrumbs), ed.onDidChangeCursorSelection(sync), ed.onDidChangeModelOptions(sync), ed.onDidChangeModelContent(() => { sync(); scheduleCrumbs(); clearTimeout(timer); timer = setTimeout(() => validate(ed.getModel()), 250); })];
@@ -72,6 +80,16 @@ export function useEditor() {
     catch (e) { setError((e as Error).message); }
     finally { file.saving = false; sync(); }
   }, [sync]);
+  // Vim bindings attach to the editor once the option is known; ":w" saves.
+  const saveRef = useRef(save); saveRef.current = save;
+  useEffect(() => {
+    const ed = editor.current; const status = vimStatus.current;
+    if (!vim || !ed || !status) return;
+    let disable: (() => void) | undefined; let cancelled = false;
+    enableVim(ed, status, () => void saveRef.current(), setVimMode)
+      .then(off => { if (cancelled) off(); else disable = off; }, e => setError(`Vim mode could not be loaded: ${(e as Error).message}`));
+    return () => { cancelled = true; disable?.(); setVimMode(null); };
+  }, [vim]);
   const find = useCallback((replace = false) => { const ed = editor.current; if (!ed?.getModel()) return; ed.focus(); void ed.getAction(replace ? 'editor.action.startFindReplaceAction' : 'actions.find')?.run(); }, []);
   useEffect(() => {
     document.title = `${state.dirty ? '• ' : ''}${state.path.split('/').pop() || 'HA Editor'} — HA Editor`;
@@ -98,5 +116,5 @@ export function useEditor() {
     const ed = editor.current; if (!ed?.getModel()) return;
     ed.setPosition({ lineNumber: line, column }); ed.revealLineInCenterIfOutsideViewport(line); ed.focus();
   }, []);
-  return { container, state, crumbs, error, setError, open, save, find, moved, removed, goTo };
+  return { container, vimStatus, vimMode, state, crumbs, error, setError, open, save, find, moved, removed, goTo };
 }

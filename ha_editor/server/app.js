@@ -15,7 +15,7 @@ const MEDIA_TYPES = {
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
-export async function createApp(rootPath, { ingressOnly = false, hidden = [], showConfigFolder = true } = {}) {
+export async function createApp(rootPath, { ingressOnly = false, hidden = [], showConfigFolder = true, vimMode = false } = {}) {
   const root = await fs.realpath(rootPath);
   const isHidden = hiddenMatcher(hidden); // Names hidden from the tree and search via the add-on options.
   const app = express();
@@ -96,7 +96,7 @@ export async function createApp(rootPath, { ingressOnly = false, hidden = [], sh
       const stat = await fs.stat(target);
       if (stat.isFile() && stat.size < 64) homeAssistantVersion = (await fs.readFile(target, 'utf8')).trim() || null;
     } catch {} // Missing outside Home Assistant (or before its first start).
-    res.json({ homeAssistantVersion, showConfigFolder });
+    res.json({ homeAssistantVersion, showConfigFolder, vimMode });
   });
   // Read-only media preview for images, audio and video. Only media types are served, with Range
   // support so players can seek and stream; SVGs run with scripts disabled.

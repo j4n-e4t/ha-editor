@@ -1,5 +1,5 @@
 export type FolderKind = 'folder' | 'esphome' | 'blueprints' | 'image' | 'media' | 'themes' | 'tts' | 'www' | 'zigbee2mqtt' | 'homematicip';
-export type FileKind = FolderKind | 'homeassistant' | 'yaml' | 'json' | 'python' | 'shell' | 'code' | 'database' | 'log' | 'picture' | 'audio' | 'video' | 'text';
+export type FileKind = FolderKind | 'homeassistant' | 'yaml' | 'json' | 'python' | 'javascript' | 'typescript' | 'shell' | 'code' | 'database' | 'log' | 'picture' | 'audio' | 'video' | 'text';
 
 // Top-level folders that hold Home Assistant configuration split out of configuration.yaml
 // (packages, !include targets) and blueprints. Other YAML, such as themes, dashboards,
@@ -20,7 +20,7 @@ export type PreviewKind = 'image' | 'audio' | 'video';
 /** Images, audio and video open in a preview instead of the text editor. */
 export const previewKind = (path: string): PreviewKind | null => IMAGE.test(path) ? 'image' : AUDIO.test(path) ? 'audio' : VIDEO.test(path) ? 'video' : null;
 export const isImage = (path: string) => IMAGE.test(path);
-const EXTENSIONS: Record<string, FileKind> = { json: 'json', py: 'python', sh: 'shell', js: 'code', ts: 'code', html: 'code', css: 'code', xml: 'code' };
+const EXTENSIONS: Record<string, FileKind> = { json: 'json', py: 'python', sh: 'shell', js: 'javascript', mjs: 'javascript', cjs: 'javascript', ts: 'typescript', html: 'code', css: 'code', xml: 'code' };
 
 export function fileKind(path: string, directory = false): FileKind {
   const parts = path.toLowerCase().split('/');

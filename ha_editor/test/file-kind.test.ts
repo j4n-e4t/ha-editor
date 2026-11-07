@@ -43,6 +43,10 @@ test('maps other files to generic kinds', () => {
   assert.equal(fileKind('.storage/core.config_entries'), 'text');
   assert.equal(fileKind('ui-lovelace.json'), 'json');
   assert.equal(fileKind('python_scripts/hello.py'), 'python');
+  for (const path of ['www/card.js', 'www/community/button.mjs', 'www/legacy.cjs']) assert.equal(fileKind(path), 'javascript', path);
+  assert.equal(fileKind('www/src/card.ts'), 'typescript');
+  assert.equal(fileKind('themes/dark.yaml'), 'yaml');
+  assert.equal(fileKind('www/style.css'), 'code');
 });
 
 test('marks dotfiles, dot folders and their contents as hidden', () => {

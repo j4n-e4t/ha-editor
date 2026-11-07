@@ -117,3 +117,24 @@
   mark { background: light-dark(#fff0b3, #685517); color: inherit; border-radius: 2px; }
   * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb-color) transparent; }
 }
+
+/* Vim mode: a mode chip, then monaco-vim's status node. monaco-vim fills that node with spans for the
+   mode (replaced by the chip), the command line, messages and pending keys, and toggles its inline display;
+   it is kept to one 24px row so opening ":" or "/" never changes the footer's height. */
+@layer components {
+  .vim-mode { flex: none; padding: 0 6px; border-radius: var(--radius-sm); font-size: 11px; line-height: 18px; font-weight: 600; letter-spacing: 0.04em; background: var(--hover); color: var(--foreground); }
+  .vim-mode:is([data-mode='insert'], [data-mode='replace']) { background: var(--primary); color: var(--primary-foreground); }
+  .vim-mode[data-mode^='visual'] { background: color-mix(in srgb, var(--primary) 25%, transparent); color: var(--foreground); }
+  .vim-status { display: flex !important; flex: 1; min-width: 0; height: 24px; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; line-height: 24px; }
+  .vim-status > span { flex: none; display: flex; align-items: center; min-width: 0; height: 24px; }
+  .vim-status > span:first-child { display: none; }
+  .vim-status > span:nth-child(2):not(:empty) { flex: 1; }
+  .vim-status > span:nth-child(2) > span:first-child { flex: 1; display: flex; align-items: center; min-width: 0; font-family: inherit !important; color: var(--foreground); }
+  .vim-status > span:nth-child(2) > span:last-child:not(:first-child) { flex: none; margin-left: 10px; }
+  .vim-status input { flex: 1; min-width: 4ch; height: 24px; margin: 0; border: 0; outline: 0; padding: 0 0 0 1px; background: transparent; color: var(--foreground); font: inherit; line-height: 24px; }
+  .vim-status > .vim-notification { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; color: var(--foreground); }
+  .vim-status > span:last-child { float: none !important; margin-left: auto; color: var(--foreground); }
+  /* While ":" or "/" is open, the pending-key echo would only repeat the prompt character. */
+  .vim-status:has(input) > span:last-child { display: none; }
+  @media (max-width: 640px) { .vim-status > span:nth-child(2) > span:last-child:not(:first-child) { display: none; } }
+}

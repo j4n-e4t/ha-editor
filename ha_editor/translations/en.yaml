@@ -10,3 +10,9 @@ configuration:
       Names to hide from the file tree and search, such as .cache or .cloud.
       Use * as a wildcard (for example *.db-wal), or a path from the
       configuration folder such as esphome/.esphome.
+  vim_mode:
+    name: Vim mode
+    description: >-
+      Use Vim key bindings in the editor: hjkl to move, i to insert, Esc for
+      normal mode, v for visual mode and :w to save. The mode is shown in the
+      status bar.

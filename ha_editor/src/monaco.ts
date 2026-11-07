@@ -11,6 +11,8 @@ import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js';
 import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js';
 import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js';
 import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js';
+import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js';
+import 'monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetController2.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker';
 import { parseDocument, LineCounter, type Document } from 'yaml';
 import { cssVariable, getState, subscribe, toHex } from './lib/home-assistant';

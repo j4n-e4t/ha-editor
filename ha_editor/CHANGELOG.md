@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7
+
+- Home Assistant autocomplete in YAML: entity IDs (with friendly names, also inside templates), actions and their `data` fields, areas, floors and devices, taken live from your Home Assistant.
+- Hover an entity ID for its state and attributes, or an action for its description and fields.
+- Warning underline for entity IDs that don't exist in Home Assistant.
+- New option: **Vim mode** switches the editor to Vim key bindings (normal, insert and visual modes, `:w` to save), with the mode shown in the status bar.
+- File icons for Python, JavaScript, TypeScript and JSON, and a YAML icon for YAML that isn't Home Assistant configuration (themes, dashboards and similar).
+
 ## 0.1.6
 
 - New options: **Show config folder** turns the top-level configuration folder row on or off, and **Hidden files and folders** hides names such as `.cache` or `.cloud` (wildcards and paths supported) from the tree and search.

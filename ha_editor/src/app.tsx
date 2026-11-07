@@ -21,7 +21,9 @@ const tabTrigger = 'h-full flex-1 rounded-none border-b-2 border-transparent px-
 const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 export function App() {
-  const { container, state, crumbs, error, setError, open, save, find, moved, removed, goTo } = useEditor();
+  const [showConfigFolder, setShowConfigFolder] = useState<boolean | null>(null);
+  const [vimEnabled, setVimEnabled] = useState<boolean | null>(null);
+  const { container, vimStatus, vimMode, state, crumbs, error, setError, open, save, find, moved, removed, goTo } = useEditor(vimEnabled);
   const breadcrumbs = useRef<HTMLElement>(null);
   // Keep the innermost crumb visible when the path is wider than the bar.
   useEffect(() => { const bar = breadcrumbs.current; if (bar) bar.scrollLeft = bar.scrollWidth; }, [crumbs]);
@@ -31,11 +33,10 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const searchInput = useRef<HTMLInputElement>(null);
   const [haVersion, setHaVersion] = useState<string | null>(null);
-  const [showConfigFolder, setShowConfigFolder] = useState<boolean | null>(null);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   useEffect(() => {
-    api<{ homeAssistantVersion: string | null; showConfigFolder: boolean }>('info')
-      .then(info => { setHaVersion(info.homeAssistantVersion); setShowConfigFolder(info.showConfigFolder); }, () => setShowConfigFolder(true));
+    api<{ homeAssistantVersion: string | null; showConfigFolder: boolean; vimMode?: boolean }>('info')
+      .then(info => { setHaVersion(info.homeAssistantVersion); setShowConfigFolder(info.showConfigFolder); setVimEnabled(!!info.vimMode); }, () => { setShowConfigFolder(true); setVimEnabled(false); });
   }, []);
   useEffect(() => setSidebar(!narrow), [narrow]);
   const showSearch = useCallback(() => { setSidebar(true); setTab('search'); requestAnimationFrame(() => searchInput.current?.select()); }, []);
@@ -151,9 +152,16 @@ export function App() {
       </div>
 
       <footer className="flex h-6 shrink-0 items-center justify-between gap-3 border-t bg-sidebar px-4 text-xs text-muted-foreground max-sm:justify-end max-sm:px-2 max-sm:text-[10px]">
-        <span className="flex items-center gap-1.5 max-sm:hidden" title="Home Assistant version">
-          {haVersion && <><FileIcon path="configuration.yaml" />Home Assistant {haVersion}</>}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className={cn('flex shrink-0 items-center gap-1.5 max-sm:hidden', vimEnabled && 'max-lg:hidden')} title="Home Assistant version">
+            {haVersion && <><FileIcon path="configuration.yaml" />Home Assistant {haVersion}</>}
+          </span>
+          {/* Vim mode: the mode chip, then monaco-vim's node with the ":" or "/" command line, messages and pending keys. */}
+          <div className={cn('flex h-6 min-w-0 flex-1 items-center gap-2.5 font-mono', (!vimEnabled || !state.path || state.preview) && 'invisible')}>
+            {vimMode && <span data-mode={vimMode} className="vim-mode">{vimMode.toUpperCase()}</span>}
+            <div ref={vimStatus} aria-live="polite" className="vim-status" />
+          </div>
+        </div>
         {state.preview && mediaInfo && (
           <div className="flex items-center gap-[18px] whitespace-nowrap max-sm:gap-2.5">
             {mediaInfo.width ? <span title="Dimensions">{mediaInfo.width} × {mediaInfo.height}</span> : null}

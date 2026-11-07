@@ -17,10 +17,10 @@ test('matches names at any depth, wildcards, and paths from the configuration fo
 test('reads add-on options with safe defaults', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ha-editor-options-'));
   try {
-    assert.deepEqual(await loadOptions(path.join(dir, 'missing.json')), { hidden: [], showConfigFolder: true });
-    await fs.writeFile(path.join(dir, 'options.json'), JSON.stringify({ show_config_folder: false, hidden: ['.cache', ' ', '.cloud'] }));
-    assert.deepEqual(await loadOptions(path.join(dir, 'options.json')), { hidden: ['.cache', '.cloud'], showConfigFolder: false });
+    assert.deepEqual(await loadOptions(path.join(dir, 'missing.json')), { hidden: [], showConfigFolder: true, vimMode: false });
+    await fs.writeFile(path.join(dir, 'options.json'), JSON.stringify({ show_config_folder: false, vim_mode: true, hidden: ['.cache', ' ', '.cloud'] }));
+    assert.deepEqual(await loadOptions(path.join(dir, 'options.json')), { hidden: ['.cache', '.cloud'], showConfigFolder: false, vimMode: true });
     await fs.writeFile(path.join(dir, 'broken.json'), '{');
-    assert.deepEqual(await loadOptions(path.join(dir, 'broken.json')), { hidden: [], showConfigFolder: true });
+    assert.deepEqual(await loadOptions(path.join(dir, 'broken.json')), { hidden: [], showConfigFolder: true, vimMode: false });
   } finally { await fs.rm(dir, { recursive: true, force: true }); }
 });

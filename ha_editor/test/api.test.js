@@ -134,9 +134,9 @@ test('deletes files and folders inside the configuration directory only', async 
 
 test('reports the Home Assistant version from .HA_VERSION when present', async () => {
   const { root, request } = await fixture();
-  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: null, showConfigFolder: true });
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: null, showConfigFolder: true, vimMode: false });
   await fs.writeFile(path.join(root, '.HA_VERSION'), '2026.11.0\n');
-  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: '2026.11.0', showConfigFolder: true });
+  assert.deepEqual(await (await request('info')).json(), { homeAssistantVersion: '2026.11.0', showConfigFolder: true, vimMode: false });
 });
 
 test('creates files and folders without overwriting', async () => {
@@ -216,4 +216,5 @@ test('hides configured names from the tree and search, and reports the folder op
   const result = await (await request('search?q=Home')).json();
   assert.deepEqual(result.matches.map(m => m.path), ['esphome/node.yaml']);
   assert.equal((await (await request('info')).json()).showConfigFolder, false);
+  assert.equal((await (await request('info')).json()).vimMode, false);
 });

@@ -15,6 +15,18 @@ Open the Search sidebar tab or press Ctrl/Cmd+Shift+F to search across saved con
 
 Images (PNG, JPEG, GIF, WebP, AVIF, BMP, ICO, SVG up to 25 MB) open in a preview instead of the editor. They fit the pane; click to toggle actual size. Audio (MP3, WAV, OGG, Opus, FLAC, M4A, AAC) and video (MP4, MOV, WebM, OGV, MKV) play in the browser's own player, with seeking; which formats play depends on your browser. The status bar shows dimensions, duration, file size and type. Media files are view-only, and SVGs are displayed with scripts disabled.
 
+### Home Assistant autocomplete
+
+In YAML files, the editor suggests values from your running Home Assistant as you type, including the friendly name of each entity:
+
+- **Entity IDs** after `entity_id:`, `entity:` and `entities:` (also in lists), and inside templates such as `states('…')` or `is_state('…')`. Type part of an ID or of its friendly name.
+- **Actions** after `action:` or `service:`, and their **fields** under the action's `data:` (required fields first).
+- **Areas, floors and devices** after `area_id:`, `floor_id:` and `device_id:`.
+
+Hover an entity ID to see its state and attributes, or an action to see its description and fields. Entity IDs that don't exist in Home Assistant get a warning underline; only literal IDs whose domain Home Assistant knows are checked, so templates and `!input` values are left alone. Press Ctrl+Space to show suggestions at any time.
+
+The data comes from the Home Assistant page you have open (the editor runs inside it), so no extra permissions are needed and nothing is sent elsewhere. Outside Home Assistant there are no suggestions.
+
 The bar above the editor shows where you are: the file's folders, the file, and the YAML key path at the cursor, for example `automation › Morning lights › triggers › time`. List items are named by their `alias`, `name` or `id` when they have one. Click a part of the path to jump to it, or the file name to go to the top. A dot after the file name marks unsaved changes.
 
 The bottom bar shows the current line and column, selected character count, detected indentation width, UTF-8 encoding, LF/CRLF line endings, and language mode. These are file details, not a formatter or extension status.
@@ -41,6 +53,7 @@ Set these on the add-on's **Configuration** tab, then restart the add-on.
   ```
 
   A name matches files and folders with that name at any depth, `*` and `?` are wildcards, and an entry containing `/` matches that path from the configuration folder. Hiding a folder hides everything in it. Hidden files are only left out of the UI; they are not protected.
+- **Vim mode** (`vim_mode`, default off): use Vim key bindings in the editor. The editor starts in normal mode: `h` `j` `k` `l` move, `i`/`a`/`o` enter insert mode, `Esc` returns to normal mode, `v`/`V` select, and operators, counts, registers, `/` search, `.` and `u` work as in Vim. `:w` saves, and `:s` and `:%s` replace. The status bar shows the current mode, pending keys and the `:` command line. Ctrl shortcuts that Vim uses follow Vim (for example Ctrl+F scrolls a page).
 
 ## Security
 

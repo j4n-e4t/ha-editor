@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 
 /**
  * Add-on options from the Supervisor (/data/options.json). Outside Home Assistant the file is
- * missing and the defaults apply; HIDDEN (comma-separated) and SHOW_CONFIG_FOLDER override them.
+ * missing and the defaults apply; HIDDEN (comma-separated), SHOW_CONFIG_FOLDER and VIM_MODE override them.
  */
 export async function loadOptions(file = process.env.OPTIONS_PATH || '/data/options.json') {
   let options = {};
@@ -10,9 +10,11 @@ export async function loadOptions(file = process.env.OPTIONS_PATH || '/data/opti
   catch (error) { if (error.code !== 'ENOENT') console.warn(`Ignoring unreadable add-on options: ${error.message}`); }
   const hidden = process.env.HIDDEN !== undefined ? process.env.HIDDEN.split(',') : options.hidden;
   const show = process.env.SHOW_CONFIG_FOLDER !== undefined ? process.env.SHOW_CONFIG_FOLDER !== 'false' : options.show_config_folder;
+  const vim = process.env.VIM_MODE !== undefined ? process.env.VIM_MODE === 'true' : options.vim_mode;
   return {
     hidden: Array.isArray(hidden) ? hidden.map(String).map(s => s.trim()).filter(Boolean) : [],
     showConfigFolder: show !== false,
+    vimMode: vim === true,
   };
 }
 
